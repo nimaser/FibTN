@@ -1,0 +1,16 @@
+name = "FibErrThresh"
+uuid = "5a702e01-c761-448f-bf74-21865a8cdff7"
+version = "0.1.0"
+authors = ["nmaserang <nmaserang@berkeley.edu>"]
+
+[deps]
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+SparseArraysBase = "0d5efcca-f356-4864-8770-e1ed8d78f208"
+TensorKitSectors = "13a9c161-d5da-41f0-bcbd-e1a08ae0647f"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+ITensors = "0.9.14"
+SparseArraysBase = "0.7.7"
+TensorKitSectors = "0.3.2"
+Test = "1.11.0"
