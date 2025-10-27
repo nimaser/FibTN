@@ -3,6 +3,10 @@
 
 # Fibonacci input category data; dim and N, F, R symbols
 using TensorKitSectors
+const qdim = TensorKitSectors.dim # to avoid name conflict
+
+# so we can make some tensors
+using ITensors
 
 ### INDEX CONVERSIONS ###
 
@@ -13,15 +17,17 @@ function ijk2p(i::FibonacciAnyon, j::FibonacciAnyon, k::FibonacciAnyon)
     elseif (k == FibonacciAnyon(:I)) p = 4
     end
     p
+end
 
 function p2ijk(p::Int)
     i = j = k = FibonacciAnyon(:τ)
     if p == 1 i = j = k = FibonacciAnyon(:I)
-    else if p == 2 i = FibonacciAnyon(:I)
-    else if p == 3 j = FibonacciAnyon(:I)
-    else if p == 4 k = FibonacciAnyon(:I)
+    elseif p == 2 i = FibonacciAnyon(:I)
+    elseif p == 3 j = FibonacciAnyon(:I)
+    elseif p == 4 k = FibonacciAnyon(:I)
     end
     i, j, k
+end
 
 function abc2etc(a::Int, b::Int, c::Int)
     # eliminate cases which go to 0 due to inconsistency
@@ -49,7 +55,14 @@ function Gsymbol(
         a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
         d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
     )
-    Fsymbol(a, b, c, d, e, f) / √(dim(e)*dim(f))
+    Fsymbol(a, b, c, d, e, f) / √(qdim(e)*qdim(f))
+end
+
+### FIXED VECTOR ###
+
+function StringTripletVector(a::Int)
+    x = Index(5, "x")
+    onehot(x=>a)
 end
 
 ### GSTRIANGLE ###
@@ -61,7 +74,7 @@ function GSTriangle_data()
             for c in 1:5
                 local i, j, k, λ, μ, ν, p
                 try i, j, k, λ, μ, ν, p = abc2etc(a, b, c) catch; continue end
-                GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(dim(i)*dim(j)*dim(k))
+                GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
                 # @show a, b, c, p, μ, i, ν, j, λ, k
             end
         end
@@ -76,3 +89,4 @@ function GSTriangle()
     p = Index(5, "c")
     ITensor(GSTriangle_data(), a, b, c, p)
 end
+
