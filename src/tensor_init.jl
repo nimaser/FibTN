@@ -68,13 +68,13 @@ end
 ### GSTRIANGLE ###
 
 function GSTriangle_data()
-    GSTriangle_data = Array{Float64}(undef, 5, 5, 5, 5)
+    GSTriangle_data = zeros(Float64, 5, 5, 5, 5)
     for a in 1:5
         for b in 1:5
             for c in 1:5
                 local i, j, k, λ, μ, ν, p
                 try i, j, k, λ, μ, ν, p = abc2etc(a, b, c) catch; continue end
-                GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
+                GSTriangle_data[a, b, c, p] = (qdim(λ)*qdim(μ)*qdim(ν))^(1/6) * Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
                 # @show a, b, c, p, μ, i, ν, j, λ, k
             end
         end
@@ -86,7 +86,7 @@ function GSTriangle()
     a = Index(5, "a")
     b = Index(5, "b")
     c = Index(5, "c")
-    p = Index(5, "c")
+    p = Index(5, "p")
     ITensor(GSTriangle_data(), a, b, c, p)
 end
 

@@ -1,6 +1,7 @@
 using Graphs
 using MetaGraphsNext
 using GraphRecipes, Plots
+using StringAlgorithms
 
 #=
 # Consider an undirected graph L = (VL, EL) such that
@@ -69,6 +70,18 @@ function metagraphplot(mg::MetaGraph)
     vlabs = collect(labels(mg))
     elabs = Dict(code_for.((mg,), t) => mg[t...] for t in collect(edge_labels(mg)))
     GraphRecipes.graphplot(D, names=vlabs, edgelabel=elabs)
+end
+
+function add_cycles(c1::Vector{Int64}, c2::Vector{Int64})
+    lcs = longestcommonsubstring(c1, c2)
+    c1range = findfirst(lcs, c1)
+    c2range = findfirst(lcs, c2)
+end
+
+function all_cycles(mg::MetaGraph)
+    B = cycle_basis(mg) # this exists because mg is planar
+    
+
 end
 
 struct Plaquette
@@ -163,3 +176,4 @@ end
 
 ### EDGE PASS ###
 
+# identify all cycles in D
