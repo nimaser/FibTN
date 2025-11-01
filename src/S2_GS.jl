@@ -7,12 +7,13 @@ include("tensor_init.jl")
 using ITensorUnicodePlots
 
 # plaquette 1 top/bottom right/center/left
-P1_TR = GSTriangle()
+
 P1_TC = GSTriangle()
 P1_TL = GSTriangle()
 P1_BL = GSTriangle()
 P1_BC = GSTriangle()
-P1_BR = GSTriangle()
+
+# plaquette 1, 2 
 
 # generate a vacuum vector for each vertex
 P1_TR_0 = StringTripletVector(1)
@@ -40,6 +41,7 @@ R3 = StringTripletReflector()
 R4 = StringTripletReflector()
 R5 = StringTripletReflector()
 R6 = StringTripletReflector()
+
 
 # match the indices of the tensors so they can be contracted;
 # specifically, convert all c's to the clockwise neighbor's b

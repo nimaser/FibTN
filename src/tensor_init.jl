@@ -65,6 +65,15 @@ function StringTripletVector(a::Int)
     onehot(x=>a)
 end
 
+function StringTripletReflector()
+    arr = [1 0 0 0 0;
+           0 0 0 1 0;
+           0 0 1 0 0;
+           0 1 0 0 0;
+           0 0 0 0 1]
+    ITensor(arr, Index(5, "i"), Index(5, "j"))
+end
+
 ### GSTRIANGLE ###
 
 function GSTriangle_data()
