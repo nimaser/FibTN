@@ -80,6 +80,12 @@ end
 
 ### VERTEX PASS ###
 
+function findmutualneighbors(mg::MetaGraph, p::Int, p_nb::Int)
+    p_nbs = collect(neighbor_labels(mg, p))
+    p_nb_nbs = collect(neighbor_labels(mg, p_nb))
+    common_nbs = intersect(p_nbs, p_nb_nbs)
+end
+
 function emptyL()
     MetaGraph(
         Graph()::SimpleGraph;
@@ -92,26 +98,35 @@ function emptyL()
     )
 end
 
-function makeD(vertices::Vector{Int}, orders::Vector{Int}, edges::Vector{Pair{Int, Int}})
+function makeD(
+        vertices::Union{Tuple{Vararg{Int}}, Vector{Int}},
+        orders::Union{Tuple{Vararg{Int}}, Vector{Int}},
+        edges::Union{Tuple{Vararg{Pair{Int, Int}}}, Vector{Pair{Int, Int}}}
+    )
     if length(vertices) != length(orders) throw(ArgumentError("should have one order per vertex")) end
-    mg = MetaGraph(
+    D = MetaGraph(
         Graph();
         label_type=Int, # this label is different than the underlying Graph.jl vertex code
         vertex_data_type=Plaquette,
-        edge_data_type=Nothing,
+        edge_data_type=Union{Tuple{Vararg{Int}}, Nothing}, # mutually shared neighbors
         graph_data=emptyL(),
     )
     # add vertices
     for (v, o) in zip(vertices, orders)
-        mg[v] = o
+        D[v] = Plaquette(o, [], false)
     end
     # add edges
-    labs = collect(labels(mg))
+    labs = collect(labels(D))
     for e in edges
         if (e.first ∉ labs || e.second ∉ labs) throw(ArgumentError("invalid vertex label in edge")) end
-        mg[[e...]...] = nothing
+        D[[e...]...] = nothing 
     end
-    mg
+    # label edges with mutual plaquettes - most convenient to do this after the graph is built
+    for e in edges
+        mutuals = findmutualneighbors(D, e.first, e.second)
+        if length(mutuals) != 0 D[[e...]...] = tuple(sort(mutuals)...) end
+    end
+    D
 end
 
 function makeLvertices(D::MetaGraph)
@@ -125,9 +140,8 @@ function makeLvertices(D::MetaGraph)
         # for each adjacent plaquette, attempt to create two shared Lvertices
         p_nbs = collect(neighbor_labels(D, p))
         for p_nb in p_nbs
-            # determine whether our neighbors have neighbors in common with us
-            p_nb_nbs = collect(neighbor_labels(D, p_nb))
-            common_nbs = intersect(p_nbs, p_nb_nbs)
+            # get the neighbors we've got in common 
+            common_nbs = D[p, p_nb]
     
             # create vertices shared between three plaquettes
             p_nb_vertices_created = 0
@@ -136,7 +150,7 @@ function makeLvertices(D::MetaGraph)
                 L_vertex_label = tuple(1, sort([p, p_nb, common_nb])...)
                 if add_vertex!(D[], L_vertex_label, vertex_counter)
                     p_nb_vertices_created += 1
-                    global vertex_counter += 1
+                    vertex_counter += 1
                     # add the vertex to the three plaquettes' collections
                     push!(D[p].vertices, L_vertex_label)
                     push!(D[p_nb].vertices, L_vertex_label)
@@ -150,8 +164,8 @@ function makeLvertices(D::MetaGraph)
             # create vertices shared between just two plaquettes
             for i in 1:(2-p_nb_vertices_created)
                 L_vertex_label = tuple(i, sort([p, p_nb])...)
-                if add_vertex!(L, L_vertex_label, vertex_counter)
-                    global vertex_counter += 1
+                if add_vertex!(D[], L_vertex_label, vertex_counter)
+                    vertex_counter += 1
                     push!(D[p].vertices, L_vertex_label)
                     push!(D[p_nb].vertices, L_vertex_label)
                 end
@@ -165,7 +179,7 @@ function makeLvertices(D::MetaGraph)
         # make any remaining unshared vertices
         for i in 1:vertices_left
             L_vertex_label = (i, p,)
-            add_vertex!(L, L_vertex_label, vertex_counter)
+            add_vertex!(D[], L_vertex_label, vertex_counter)
             global vertex_counter += 1
         end
     end
@@ -177,8 +191,13 @@ function getdegreeonevertices(mg::MetaGraph)
     [l for l in collect(labels(mg)) if degree(mg, code_for(mg, l)) == 1]
 end                                                                                  
 
-
-
-
-
-
+function makeLedges(D::MetaGraph)
+    # process plaquettes which are not part of any cycles
+    deg1vertices = getdegreeonevertices(D)
+    
+    for p in deg1vertices
+        # create shared edge
+        # connect floating vertices to shared vertex, then chain
+        # connect final two vertices
+    end
+end
