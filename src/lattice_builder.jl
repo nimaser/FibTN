@@ -64,116 +64,121 @@ using StringAlgorithms
 # positions of degree 2 vertices in a third pass.
 =#
 
+struct Plaquette
+    order::Int
+    vertices::Array{Tuple{Vararg{Int}}}
+    edgesprocessed::Bool
+end
+
 function metagraphplot(mg::MetaGraph)
     # graphplot indices labels by Graphs.jl codes, so we create an array of
     # vlabels in code order, and a dict of (code1, code2) => elabel
     vlabs = collect(labels(mg))
     elabs = Dict(code_for.((mg,), t) => mg[t...] for t in collect(edge_labels(mg)))
-    GraphRecipes.graphplot(D, names=vlabs, edgelabel=elabs)
+    GraphRecipes.graphplot(mg, names=vlabs, edgelabel=elabs)
 end
-
-function add_cycles(c1::Vector{Int64}, c2::Vector{Int64})
-    lcs = longestcommonsubstring(c1, c2)
-    c1range = findfirst(lcs, c1)
-    c2range = findfirst(lcs, c2)
-end
-
-function all_cycles(mg::MetaGraph)
-    B = cycle_basis(mg) # this exists because mg is planar
-    
-
-end
-
-struct Plaquette
-    order::Int
-    vertices::Array{Tuple{Vararg{Int}}}
-end
-
-L = MetaGraph(
-    Graph()::SimpleGraph;
-    # ordered list of plaquettes this vertex is shared by, first element is an index
-    # of vertices shared by those plaquettes
-    label_type=Tuple{Vararg{Int}},
-    vertex_data_type=Int, # persistent vertex labeling in order they were created
-    edge_data_type=Bool, # whether the edge is shared between two plaquettes
-    graph_data=nothing,
-)
-
-D = MetaGraph(
-    Graph()::SimpleGraph;
-    label_type=Int, # this label is different than the underlying Graph.jl vertex code
-    vertex_data_type=Plaquette,
-    edge_data_type=Bool,
-    graph_data=L,
-)
-
-### CONSTRUCT D ###
-
-add_vertex!(D, 1, Plaquette(6, []))
-add_vertex!(D, 2, Plaquette(6, []))
-add_edge!(D, 1, 2, true)
 
 ### VERTEX PASS ###
 
-# counter for all vertices created in L
-vertex_index = 1
+function emptyL()
+    MetaGraph(
+        Graph()::SimpleGraph;
+        # ordered list of plaquettes this vertex is shared by, first element is an index
+        # of vertices shared by those plaquettes
+        label_type=Tuple{Vararg{Int}},
+        vertex_data_type=Int, # persistent vertex labeling in order they were created
+        edge_data_type=Bool, # whether the edge is shared between two plaquettes
+        graph_data=nothing,
+    )
+end
 
-# iterate through L's plaquettes (D's vertices)
-for p in collect(labels(D))
-    # number of vertices we have to work with based on order of p
-    vertices_left = D[p].order
-    @show p
-    # for each adjacent plaquette, attempt to create two shared Lvertices
-    p_nbs = collect(neighbor_labels(D, p))
-    for p_nb in p_nbs
-        @show p_nb
-        # determine whether our neighbors have neighbors in common with us
-        p_nb_nbs = collect(neighbor_labels(D, p_nb))
-        common_nbs = intersect(p_nbs, p_nb_nbs)
-
-        # create vertices shared between three plaquettes
-        p_nb_vertices_created = 0
-        for common_nb in common_nbs
-            @show common_nb
-            # if the vertex already exists, we will get false
-            L_vertex_label = tuple(1, sort([p, p_nb, common_nb])...)
-            if add_vertex!(L, L_vertex_label, vertex_index)
-                p_nb_vertices_created += 1
-                global vertex_index += 1
-                # add the vertex to the three plaquettes' collections
-                push!(D[p].vertices, L_vertex_label)
-                push!(D[p_nb].vertices, L_vertex_label)
-                push!(D[common_nb].vertices, L_vertex_label)
-            end
-            # whether or not we created this vertex, it still has been
-            # added to our collection, so we have one less available
-            vertices_left -= 1
-        end
-
-        # create vertices shared between just two plaquettes
-        for i in 1:(2-p_nb_vertices_created)
-            L_vertex_label = tuple(i, sort([p, p_nb])...)
-            if add_vertex!(L, L_vertex_label, vertex_index)
-                global vertex_index += 1
-                push!(D[p].vertices, L_vertex_label)
-                push!(D[p_nb].vertices, L_vertex_label)
-            end
-            vertices_left -= 1
-        end
+function makeD(vertices::Vector{Int}, orders::Vector{Int}, edges::Vector{Pair{Int, Int}})
+    if length(vertices) != length(orders) throw(ArgumentError("should have one order per vertex")) end
+    mg = MetaGraph(
+        Graph();
+        label_type=Int, # this label is different than the underlying Graph.jl vertex code
+        vertex_data_type=Plaquette,
+        edge_data_type=Nothing,
+        graph_data=emptyL(),
+    )
+    # add vertices
+    for (v, o) in zip(vertices, orders)
+        mg[v] = o
     end
+    # add edges
+    labs = collect(labels(mg))
+    for e in edges
+        if (e.first ∉ labs || e.second ∉ labs) throw(ArgumentError("invalid vertex label in edge")) end
+        mg[[e...]...] = nothing
+    end
+    mg
+end
 
-    # check that we haven't used too many vertices
-    if vertices_left < 0 throw(ErrorException("plaquette $p ran out of vertices")) end
-
-    # make any remaining unshared vertices
-    for i in 1:vertices_left
-        @show i
-        L_vertex_label = (i, p,)
-        add_vertex!(L, L_vertex_label, vertex_index)
-        global vertex_index += 1
+function makeLvertices(D::MetaGraph)
+    # counter/index for all vertices created in L
+    vertex_counter = 1
+    
+    # iterate through L's plaquettes (D's vertice)
+    for p in collect(labels(D))
+        # max number of vertices we have to work with based on order of p
+        vertices_left = D[p].order
+        # for each adjacent plaquette, attempt to create two shared Lvertices
+        p_nbs = collect(neighbor_labels(D, p))
+        for p_nb in p_nbs
+            # determine whether our neighbors have neighbors in common with us
+            p_nb_nbs = collect(neighbor_labels(D, p_nb))
+            common_nbs = intersect(p_nbs, p_nb_nbs)
+    
+            # create vertices shared between three plaquettes
+            p_nb_vertices_created = 0
+            for common_nb in common_nbs
+                # if the vertex already exists, we will get false
+                L_vertex_label = tuple(1, sort([p, p_nb, common_nb])...)
+                if add_vertex!(D[], L_vertex_label, vertex_counter)
+                    p_nb_vertices_created += 1
+                    global vertex_counter += 1
+                    # add the vertex to the three plaquettes' collections
+                    push!(D[p].vertices, L_vertex_label)
+                    push!(D[p_nb].vertices, L_vertex_label)
+                    push!(D[common_nb].vertices, L_vertex_label)
+                end
+                # whether or not we created this vertex, it still has been
+                # added to our collection, so we have one less available
+                vertices_left -= 1
+            end
+    
+            # create vertices shared between just two plaquettes
+            for i in 1:(2-p_nb_vertices_created)
+                L_vertex_label = tuple(i, sort([p, p_nb])...)
+                if add_vertex!(L, L_vertex_label, vertex_counter)
+                    global vertex_counter += 1
+                    push!(D[p].vertices, L_vertex_label)
+                    push!(D[p_nb].vertices, L_vertex_label)
+                end
+                vertices_left -= 1
+            end
+        end
+    
+        # check that we haven't used too many vertices
+        if vertices_left < 0 throw(ErrorException("plaquette $p ran out of vertices")) end
+    
+        # make any remaining unshared vertices
+        for i in 1:vertices_left
+            L_vertex_label = (i, p,)
+            add_vertex!(L, L_vertex_label, vertex_counter)
+            global vertex_counter += 1
+        end
     end
 end
 
 ### EDGE PASS ###
 
-# identify all cycles in D
+function getdegreeonevertices(mg::MetaGraph)
+    [l for l in collect(labels(mg)) if degree(mg, code_for(mg, l)) == 1]
+end                                                                                  
+
+
+
+
+
+
