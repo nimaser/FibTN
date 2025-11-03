@@ -74,7 +74,7 @@ end
 
 ### VERTEX PASS ###
 
-struct Plaquette
+mutable struct Plaquette
     order::Int
     vertices::Array{Tuple{Vararg{Int}}}
     edgesprocessed::Bool
@@ -132,22 +132,18 @@ function makeLvertices(D::MetaGraph)
     
     # iterate through L's plaquettes (D's vertice)
     for p in collect(labels(D))
-        @show p
         # for each adjacent plaquette, attempt to create two shared Lvertices
         p_nbs = collect(neighbor_labels(D, p))
         for p_nb in p_nbs
-            @show p_nb
             # get the neighbors we've got in common 
             common_nbs = D[p, p_nb]
     
             # create vertices shared between three plaquettes
             p_nb_vertices_created = 0
             for common_nb in common_nbs
-                @show common_nb
                 # if the vertex already exists, we will get false
                 L_vertex_label = tuple(1, sort([p, p_nb, common_nb])...)
                 if add_vertex!(D[], L_vertex_label, vertex_counter)
-                    @show L_vertex_label
                     vertex_counter += 1
                     # add the vertex to the three plaquettes' collections
                     push!(D[p].vertices, L_vertex_label)
@@ -163,7 +159,6 @@ function makeLvertices(D::MetaGraph)
             for i in 1:(2-p_nb_vertices_created)
                 L_vertex_label = tuple(i, sort([p, p_nb])...)
                 if add_vertex!(D[], L_vertex_label, vertex_counter)
-                    @show L_vertex_label
                     vertex_counter += 1
                     push!(D[p].vertices, L_vertex_label)
                     push!(D[p_nb].vertices, L_vertex_label)
@@ -179,7 +174,6 @@ function makeLvertices(D::MetaGraph)
         for i in 1:vertices_left
             L_vertex_label = (i, p,)
             add_vertex!(D[], L_vertex_label, vertex_counter)
-            @show L_vertex_label
             vertex_counter += 1
             push!(D[p].vertices, L_vertex_label)
         end
@@ -187,6 +181,35 @@ function makeLvertices(D::MetaGraph)
 end
 
 ### EDGE PASS ###
+
+function getplaquettesubgraph(D::MetaGraph, p:Int)
+    # get codes in L for vertices belonging to p
+    pvertices = collect(map(v->code_for(D[], v), D[p].vertices))
+    # then get subgraph in L of just the vertices of p
+    sg, _ = induced_subgraph(D[], pvertices)
+    sg
+end
+
+function getunsharedLsubgraph(D::MetaGraph)
+    unshared = [e for e in edges(D[]) if !D[][label_for(D[], e.src), label_for(D[], e.dst)]]
+    sg, _ = induced_subgraph(D[], unshared)
+    sg
+end
+
+function completescycle(D::MetaGraph, p::Int)
+    # get subgraph of vertices in D which have already been processed
+    processed = filter(p->D[p].edgesprocessed, collect(labels(D)))
+    @show processed
+    if length(processed) == 0 return false end
+    sg, vmap = induced_subgraph(D, processed)
+    # take all pairs of neighbors, then check if there is a path in sg
+    nbs = collect(neighbor_labels(sg, p))
+    for nb_pair in Base.product(nbs, nbs)
+        if first(nb_pair) == last(nb_pair) continue end
+        if has_path(sg, first(nb_pair), last(nb_pair)) return true end
+    end
+    false
+end
 
 function createsharedneighbors(D::MetaGraph, p::Int)
     p_nbs = collect(neighbor_labels(D, p))
@@ -200,37 +223,40 @@ function createsharedneighbors(D::MetaGraph, p::Int)
     end
 end
 
-function attachvertices_nocycle(D::MetaGraph, p::Int)
-    # get codes in L for vertices belonging to p
-    # then get subgraph of just the vertices of p in L
-    pvertices = collect(map(v->code_for(D[], v), D[p].vertices))
-    sg, vmap = induced_subgraph(D[], pvertices)
-    # find floating vertices and chain them
+function attachvertices_floating(D::MetaGraph, p:Int)
+    sg = getplaquettesubgraph(D, p)
     floating::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 0]
-    attached::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
-    if length(floating) > 0
-        tail = floating[1]
-        head = floating[1]
-        for v in floating[2:end]
-            D[][head, v] = false # not shared
-            head = v
-        end
-        # attach single floating vertex to some other vertex
-        if head == tail
-            D[][head, attached[1]] = false
-        end
+    if length(floating) == 0 return end
+    # if there's only one, attach it to some already attached vertex
+    head = floating[1]
+    if length(floating) == 1
+        attached::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
+        D[][head, attached[1]] = false # with only one floating vertex, length(attached) always > 0
+        return
     end
-    # regenerate subgraph to take into account newly added edges
-    pvertices = collect(map(v->code_for(D[], v), D[p].vertices))
-    sg, vmap = induced_subgraph(D[], pvertices)
-    # find attached and complete vertices
-    floating = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 0]
-    attached = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
+    # if there's multiple, chain them together
+    for v in floating[2:end]
+        D[][head, v] = false # not a shared edge
+        head = v
+    end
+end
+
+function attachvertices_finaltwo(D::MetaGraph, p::Int)
+    attached::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
+    complete::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 2]
+    if length(attached) != 2 throw(ErrorException("more than two vertices remain to be attached")) end
+    D[][attached[1], attached[2]] = false
+    append!(complete, attached)
+    if length(complete) != D[p].order throw(ErrorException("plaquette $p: order != complete")) end
+    D[p].edgesprocessed = true # indicate that this plaquette is complete
+end
+
+function attachvertices_acyclic(D::MetaGraph, p::Int)
+    attached::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
     complete::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 2]
     # connect pairs of attached vertices, ensuring that attaching them doesn't complete a cycle
     while length(attached) > 2
-        # recompute subgraph again
-        sg, vmap = induced_subgraph(D[], pvertices)
+        sg = getplaquettesubgraph(D, p)
         v = attached[1]
         for (i, candidate) in enumerate(attached[2:end])
             if !has_path(sg, code_for(sg, v), code_for(sg, candidate))
@@ -241,18 +267,38 @@ function attachvertices_nocycle(D::MetaGraph, p::Int)
             end
         end
     end
-    # every vertex is complete except for the last two attached vertices; attach them
-    D[][attached[1], attached[2]] = false
-    append!(complete, attached)
-    # check that we have the right number of vertices
-    if length(complete) != D[p].order throw(ErrorException("plaquette $p: order != complete")) end
+    attachvertices_finaltwo(D, p)
+end
+
+function attachvertices_cyclic(D::MetaGraph, p::Int)
+    attached::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 1]
+    complete::Vector{Tuple{Vararg{Int}}} = [l for (i, l) in enumerate(D[p].vertices) if degree(sg, i) == 2]
+    # try to connect every pair of attached vertices on this plaquette
+    while true
+        unshared_sg = getunsharedLsubgraph(D)
+        plaquette_sg = getplaquettesubgraph(D, p)
+        for (i, j) in Base.product(attached, attached)
+            if i == j continue end
+            if has_path(plaquette_sg, code_for(plaquette_sg, i), code_for(plaquette_sg, j)) continue end
+
+    #
+    #
+    attachvertices_finaltwo(D, p)
 end
 
 function makeLedges(D::MetaGraph)
     # first pass: process all plaquettes which would not create cycles by doing so
     for p in collect(labels(D))
         createsharedneighbors(D, p)
-        # if completescycle(D, p) continue end
-        attachvertices_nocycle(D, p)
+        attachvertices_floating(D, p)
+        if completescycle(D, p) continue end
+        attachvertices_acyclic(D, p)
+    end
+    # second pass: process all plaquettes which would have created cycles, trying until all plaquettes have
+    # been completed; each plaquette which is unable to be filled in is waiting on others which can be, so
+    # there shouldn't be any deadlock
+    unprocessed = filter(p->!D[p].edgesprocessed, collect(labels(D)))
+    for p in unprocessed
+        attachvertices_cyclic(D, p)
     end
 end
