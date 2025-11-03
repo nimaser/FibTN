@@ -84,7 +84,6 @@ function GSTriangle_data()
                 local i, j, k, λ, μ, ν, p
                 try i, j, k, λ, μ, ν, p = abc2etc(a, b, c) catch; continue end
                 GSTriangle_data[a, b, c, p] = (qdim(λ)*qdim(μ)*qdim(ν))^(1/6) * Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
-                # @show a, b, c, p, μ, i, ν, j, λ, k
             end
         end
     end
