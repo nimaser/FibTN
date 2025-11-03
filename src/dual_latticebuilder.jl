@@ -71,7 +71,7 @@ function metagraphplot(mg::MetaGraph)
     # graphplot indices labels by Graphs.jl codes, so we create an array of
     # vlabels in code order, and a dict of (code1, code2) => elabel
     vlabs = collect(map(string, labels(mg)))
-    elabs = Dict(code_for.((mg,), t) => mg[t...] for t in collect(map(string, edge_labels(mg))))
+    elabs = Dict(code_for.((mg,), t) => mg[t...] for t in collect(edge_labels(mg)))
     GraphRecipes.graphplot(mg, names=vlabs, edgelabel=elabs)
 end
 
