@@ -1,14 +1,37 @@
-# @author Nikhil Maserang
-# @date 2025/10/24
+#=
+# This module creates the tensors which are used as building blocks for the networks
+# which represent full many-body states. They are all symmetric TODO, and follow the
+# convention that any physical index will be at the end of its index list, and have
+# a tag of pn, where n is a number. Virtual indices will have tags of in, where n is
+# a number. Those numbers n are just indices internal to the tensor, and have no
+# bearing on any other tensor or any relations between tensors. Physical and virtual
+# indices will also have a "phys" or "virt" tag.
+=#
+
+using ITensors
 
 # Fibonacci input category data; dim and N, F, R symbols
 using TensorKitSectors
 const qdim = TensorKitSectors.dim # to avoid name conflict
 
-# so we can make some tensors
-using ITensors
+function Gsymbol(
+        a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
+        d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
+    )
+    Fsymbol(a, b, c, d, e, f) / √(qdim(e)*qdim(f))
+end
 
-### INDEX CONVERSIONS ###
+function virtualindices(T::ITensor)
+    [i for i in inds(T) if hastags(i, "virt")]
+end
+
+function physicalindices(T::ITensor)
+    [i for i in inds(T) if hastags(i, "phys")]
+end
+
+###############################################################################
+# INDEX CONVERSIONS
+###############################################################################
 
 function ijk2p(i::FibonacciAnyon, j::FibonacciAnyon, k::FibonacciAnyon)
     if (i == j == k) p = (i == FibonacciAnyon(:I)) ? 1 : 5
@@ -49,32 +72,30 @@ function abc2etc(a::Int, b::Int, c::Int)
     i, j, k, λ, μ, ν, ijk2p(i, j, k)
 end
 
-### HELPER FUNCTIONS ###
-
-function Gsymbol(
-        a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
-        d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
-    )
-    Fsymbol(a, b, c, d, e, f) / √(qdim(e)*qdim(f))
-end
-
-### FIXED VECTOR ###
+###############################################################################
+# MISC TENSORS
+###############################################################################
 
 function StringTripletVector(a::Int)
-    x = Index(5, "x")
+    x = Index(5, "virt,i1")
     onehot(x=>a)
 end
 
-function StringTripletReflector()
+function StringTripletReflector(i1::Index, i2::Index)
+    if i1.space != i2.space != 5
+        throw(ArgumentError("indices must be dim 5"))
+    end
     arr = [1 0 0 0 0;
            0 0 0 1 0;
            0 0 1 0 0;
            0 1 0 0 0;
            0 0 0 0 1]
-    ITensor(arr, Index(5, "i"), Index(5, "j"))
+    ITensor(arr, i1, i2)
 end
 
-### GSTRIANGLE ###
+###############################################################################
+# GROUND STATE TENSORS
+###############################################################################
 
 function GSTriangle_data()
     GSTriangle_data = zeros(Float64, 5, 5, 5, 5)
@@ -91,10 +112,22 @@ function GSTriangle_data()
 end
 
 function GSTriangle()
-    a = Index(5, "a")
-    b = Index(5, "b")
-    c = Index(5, "c")
-    p = Index(5, "p")
-    ITensor(GSTriangle_data(), a, b, c, p)
+    i1 = Index(5, "virt,i1")
+    i2 = Index(5, "virt,i2")
+    i3 = Index(5, "virt,i3")
+    p1 = Index(5, "phys,p1")
+    ITensor(GSTriangle_data(), i1, i2, i3, p1)
 end
 
+function GSSquare()
+end
+
+function GSCircle()
+end
+
+function GSTail()
+end
+
+###############################################################################
+# EXCITED STATE TENSORS
+###############################################################################
