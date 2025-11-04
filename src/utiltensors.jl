@@ -29,6 +29,14 @@ function physicalindices(T::ITensor)
     [i for i in inds(T) if hastags(i, "phys")]
 end
 
+function virtualindices(V::Vector{Index})
+    [i for i in V if hastags(i, "virt")]
+end
+
+function physicalindices(V::Vector{Index})
+    [i for i in V if hastags(i, "phys")]
+end
+
 ###############################################################################
 # INDEX CONVERSIONS
 ###############################################################################
