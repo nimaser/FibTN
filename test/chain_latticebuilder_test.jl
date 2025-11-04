@@ -1,10 +1,22 @@
-using FibErrThresh: new_plaquette, add_plaquette!, add_chain!, metagraphplot 
+using FibErrThresh: new_plaquette, add_plaquette!, add_chain!, add_cap!
 using Graphs: nv, ne
 
 @testset "separate plaquettes; order 6" begin
     g = new_plaquette(6)
     @test nv(g) == 6
     @test ne(g) == 6
+end
+
+@testset "separate plaquettes; order 6; capped" begin
+    g = new_plaquette(6)
+    for i in 1:6 add_cap!(g, i) end
+    @test nv(g) == 12
+    @test ne(g) == 12
+
+    g = new_plaquette(6)
+    cap_remaining!(g)
+    @test nv(g) == 12
+    @test ne(g) == 12
 end
 
 @testset "separate plaquettes; order 6, 6" begin
@@ -14,11 +26,27 @@ end
     @test ne(g) == 12
 end
 
+@testset "separate plaquettes; order 6, 6; capped" begin
+    g = new_plaquette(6)
+    add_plaquette!(g, 6)
+    cap_remaining!(g)
+    @test nv(g) == 24
+    @test ne(g) == 24
+end
+
 @testset "connected plaquettes; order 6, 6" begin
     g = new_plaquette(6)
     add_chain!(g, 5, 1, 6)
     @test nv(g) == 10
     @test ne(g) == 11
+end
+
+@testset "connected plaquettes; order 6, 6; capped" begin
+    g = new_plaquette(6)
+    add_chain!(g, 5, 1, 6)
+    cap_remaining!(g)
+    @test nv(g) == 18
+    @test ne(g) == 19
 end
 
 @testset "connected plaquettes; order 6, 6, 6" begin
@@ -50,6 +78,10 @@ end
 
     g = new_plaquette(6)
     @test_throws ErrorException add_chain!(g, 1, 1, 1)
+
+    g = new_plaquette(6)
+    add_chain!(g, 5, 6, 1)
+    @test_throws ErrorException add_cap!(g, 1)
 end
 
 @testset "no multigraphs" begin

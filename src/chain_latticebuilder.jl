@@ -172,7 +172,7 @@ end
 function metagraphplot(mg::MetaGraph, vlabels::Bool=true, elabels::Bool=true)
     # graphplot indices labels by Graphs.jl codes, so we create an array of
     # vlabels in code order, and a dict of (code1, code2) => elabel
-    args = Dict(:curves=>false, :nodesize=>0.5, :node_weights=>ones(length(labels(mg))))
+    args = Dict(:curves=>false, :nodesize=>0.1, :node_weights=>ones(length(labels(mg))))
     labelargs = []
     if vlabels push!(labelargs, :names=>collect(map(string, labels(mg)))) end
     if elabels push!(labelargs, :edgelabel=>Dict(code_for.((mg,), t) => mg[t...] for t in collect(edge_labels(mg)))) end
@@ -258,13 +258,17 @@ function generatequbitlattices(T::ITensor, a::MetaGraph, q::MetaGraph)
     qgraphs
 end
 
-function qubitlatticeplot(qgraphs::Any)
-    commonargs = Dict(:curves=>false, :nodeshape=>:circle, :fillcolor=>:lightgray, :names=>collect(map(string, labels(q))))
+function qubitlatticeplot(qgraphs::Any, amps::Any=nothing)
+    commonargs = Dict(:curves=>false, :nodeshape=>:circle, :fillcolor=>:lightgray, :nodesize=>0.1, :node_weights=>ones(length(labels(qgraphs[1]))))
 
     qgraphplots = []
-    for q in qgraphs
+    for (i, q) in enumerate(qgraphs)
         lc = Dict(code_for.((q,),t) => q[t...] ? :red : :black for t in collect(edge_labels(q)))
-        gp = GraphRecipes.graphplot(q, curves=false, edgecolor=lc; commonargs...)
+        if amps != nothing
+            gp = GraphRecipes.graphplot(q, title=amps[i], edgecolor=lc; commonargs...)
+        else
+            gp = GraphRecipes.graphplot(q, edgecolor=lc; commonargs...)
+        end
         push!(qgraphplots, gp)
     end
     plot(qgraphplots...)

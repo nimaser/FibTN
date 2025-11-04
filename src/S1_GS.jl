@@ -1,68 +1,83 @@
 # @author Nikhil Maserang
 # @date 2025/10/24
 
-include("tensor_init.jl")
+include("utiltensors.jl")
 
 # so we can see our tensors
 using ITensorUnicodePlots
 
 # plaquette 1 top/bottom right/center/left
-P1_TR = GSTriangle()
-P1_TC = GSTriangle()
-P1_TL = GSTriangle()
-P1_BL = GSTriangle()
-P1_BC = GSTriangle()
-P1_BR = GSTriangle()
+P1_1 = GSTriangle()
+P1_2 = GSTriangle()
+P1_3 = GSTriangle()
+P1_4 = GSTriangle()
+P1_5 = GSTriangle()
+P1_6 = GSTriangle()
 
 # generate a vacuum vector for each vertex
-P1_TR_0 = StringTripletVector(1)
-P1_TC_0 = StringTripletVector(1)
-P1_TL_0 = StringTripletVector(1)
-P1_BL_0 = StringTripletVector(1)
-P1_BC_0 = StringTripletVector(1)
-P1_BR_0 = StringTripletVector(1)
+P1_1_0 = StringTripletVector(1)
+P1_2_0 = StringTripletVector(1)
+P1_3_0 = StringTripletVector(1)
+P1_4_0 = StringTripletVector(1)
+P1_5_0 = StringTripletVector(1)
+P1_6_0 = StringTripletVector(1)
 
 # contract the "a" indices with the vacuum vector
-P1_TR = P1_TR * δ(inds(P1_TR)[1], inds(P1_TR_0)[1]) * P1_TR_0
-P1_TC = P1_TC * δ(inds(P1_TC)[1], inds(P1_TC_0)[1]) * P1_TC_0
-P1_TL = P1_TL * δ(inds(P1_TL)[1], inds(P1_TL_0)[1]) * P1_TL_0
-P1_BL = P1_BL * δ(inds(P1_BL)[1], inds(P1_BL_0)[1]) * P1_BL_0
-P1_BC = P1_BC * δ(inds(P1_BC)[1], inds(P1_BC_0)[1]) * P1_BC_0
-P1_BR = P1_BR * δ(inds(P1_BR)[1], inds(P1_BR_0)[1]) * P1_BR_0
+P1_1 = P1_1 * ITensors.δ(inds(P1_1)[1], inds(P1_1_0)[1]) * P1_1_0
+P1_2 = P1_2 * ITensors.δ(inds(P1_2)[1], inds(P1_2_0)[1]) * P1_2_0
+P1_3 = P1_3 * ITensors.δ(inds(P1_3)[1], inds(P1_3_0)[1]) * P1_3_0
+P1_4 = P1_4 * ITensors.δ(inds(P1_4)[1], inds(P1_4_0)[1]) * P1_4_0
+P1_5 = P1_5 * ITensors.δ(inds(P1_5)[1], inds(P1_5_0)[1]) * P1_5_0
+P1_6 = P1_6 * ITensors.δ(inds(P1_6)[1], inds(P1_6_0)[1]) * P1_6_0
 
-@show findall(!iszero, array(P1_TR))
-@show array(P1_TR)[findall(!iszero, array(P1_TR))]
+@show findall(!iszero, array(P1_1))
+@show array(P1_1)[findall(!iszero, array(P1_1))]
 
 # generate a reflection tensor for each edge (b c pairing)
-R1 = StringTripletReflector()
-R2 = StringTripletReflector()
-R3 = StringTripletReflector()
-R4 = StringTripletReflector()
-R5 = StringTripletReflector()
-R6 = StringTripletReflector()
-
+R1 = StringTripletReflector(inds(P1_1)[2], inds(P1_6)[1])
+R2 = StringTripletReflector(inds(P1_2)[2], inds(P1_1)[1])
+R3 = StringTripletReflector(inds(P1_3)[2], inds(P1_2)[1])
+R4 = StringTripletReflector(inds(P1_4)[2], inds(P1_3)[1])
+R5 = StringTripletReflector(inds(P1_5)[2], inds(P1_4)[1])
+R6 = StringTripletReflector(inds(P1_6)[2], inds(P1_5)[1])
+                                                   
 # match the indices of the tensors so they can be contracted;
 # specifically, convert all c's to the clockwise neighbor's b
-# after reflecting c so it can match with b
-P1_TR = @visualize P1_TR * δ(inds(P1_TR)[2], inds(R1)[1]) * R1 * δ(inds(R1)[2], inds(P1_BR)[1])
-P1_TC = P1_TC * δ(inds(P1_TC)[2], inds(R2)[1]) * R2 * δ(inds(R2)[2], inds(P1_TR)[1])
-P1_TL = P1_TL * δ(inds(P1_TL)[2], inds(R3)[1]) * R3 * δ(inds(R3)[2], inds(P1_TC)[1])
-P1_BL = P1_BL * δ(inds(P1_BL)[2], inds(R4)[1]) * R4 * δ(inds(R4)[2], inds(P1_TL)[1])
-P1_BC = P1_BC * δ(inds(P1_BC)[2], inds(R5)[1]) * R5 * δ(inds(R5)[2], inds(P1_BL)[1])
-P1_BR = P1_BR * δ(inds(P1_BR)[2], inds(R6)[1]) * R6 * δ(inds(R6)[2], inds(P1_BC)[1])
+P1_1 = @visualize P1_1 * R1
+P1_2 = P1_2 * R2
+P1_3 = P1_3 * R3
+P1_4 = P1_4 * R4
+P1_5 = P1_5 * R5
+P1_6 = P1_6 * R6
 
-@show findall(!iszero, array(P1_TR))
-@show array(P1_TR)[findall(!iszero, array(P1_TR))]
+@show findall(!iszero, array(P1_1))
+@show array(P1_1)[findall(!iszero, array(P1_1))]
 
-P1_temp = @visualize P1_TR * P1_TC
-@show findall(!iszero, array(P1_temp))
-@show array(P1_temp)[findall(!iszero, array(P1_temp))]
+P1_temp = @visualize P1_1 * P1_2
+P1_temp_data = array(P1_temp)
+@show findall(!iszero, P1_temp_data)
+@show P1_temp_data[findall(!iszero, P1_temp_data)]
 
 # contract the plaquette
-P1 = @visualize P1_TR * P1_TC * P1_TL * P1_BL * P1_BC * P1_BR
+T = @visualize P1_1 * P1_2 * P1_3 * P1_4 * P1_5 * P1_6
 
-P1_data = array(P1)
-@show findall(!iszero, array(P1_data))
-@show array(P1_data)[findall(!iszero, array(P1_data))]
+T_data = array(T)
+@show findall(!iszero, T_data)
+@show T_data[findall(!iszero, T_data)]
 
-@show inds(P1)
+@show inds(T)
+
+# janky temp display
+q = new_plaquette(6)
+cap_remaining!(q)
+q1 = qubitlattice(q)
+q2 = qubitlattice(q)
+
+q2[1, 2] = true
+q2[2, 3] = true
+q2[3, 4] = true
+q2[4, 5] = true
+q2[5, 6] = true
+q2[6, 1] = true
+
+qubitlatticeplot([q1, q2], T_data[findall(!iszero, T_data)])
