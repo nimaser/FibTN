@@ -271,7 +271,7 @@ function make_tg(ig::MetaGraph)
         label_type=Int,
         vertex_data_type=tgVertexData,
         edge_data_type=ITensor,
-        graph_data=nothing
+        graph_data=Int # running tensor index so we uniquely label all tensors as we contract
     )
 
     # create all vertices and their tensors
@@ -283,6 +283,9 @@ function make_tg(ig::MetaGraph)
     for e in edge_labels(ig)
         tg[e...] = StringTripleReflector(ig[e...]...)
     end
+
+    # initial value for tensor index, to use when making new vertices while contracting
+    tg[] = maximum(labels(ig)) + 1
     
     tg
 end
@@ -312,36 +315,50 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     if !haskey(tg, v1, v2) throw(ErrorException("no edge between vertices $v1 and $v2")) end
 
     # contract tensors on v1, edge, and v2
-    temp = @visualize tg[v1].tensor * tg[v1, v2] * tg[v2].tensor
+    T = @visualize tg[v1].tensor * tg[v1, v2] * tg[v2].tensor
+
+    # make new result vertex
+    w = tg[]
+    tg[] += 1
+    tg[w] = tgVertexData(Composite, T)
+
+    # get list of other vertices which are contracted with v1 and v2
+    nbs1 = setdiff(neighbors(tg, v1), [v2])
+    nbs2 = setdiff(neighbors(tg, v2), [v1])
     
-    # get references to all edge tensors
+    # make connections to w from neighbors one by one, removing original edges at the same time
+    for nb in nbs1
+        tg[w, nb] = tg[v1, nb]
+        rem_edge!(tg, code_for(tg, v1), code_for(tg, nb))
+    end
+    for nb in nbs2
+        tg[w, nb] = tg[v2, nb]
+        rem_edge!(tg, code_for(tg, v2), code_for(tg, nb))
+    end
 
-    # contract the tensors from the two vertices and edge, then store in remaining vertex
-    g[v].tensor = g[v].tensor *g[v, c].tensor * g[c].tensor
+    # remove v1 and v2
+    rem_vertex!(tg, code_for(tg, v1))
+    rem_vertex!(tg, code_for(tg, v2))
 
-    # remove cap and connecting edge
-    rem_edge!(g, code_for(g, v), code_for(g, c))
-    rem_vertex!(g, code_for(g, c))
+    nothing
 end
 
-function contractcaps!(g::MetaGraph)
-    caps = [l for l in collect(labels(g)) if degree(g, code_for(g, l)) == 1]
-    for cap in caps contractcap!(g, cap) end
+function contractcaps!(tg::MetaGraph)
+    caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
+    for cap in caps 
+        v = neighbors(tg, cap)[1]
+        contractedge!(tg, cap, v)
+    end
 end
 
-function contractedge!(g::MetaGraph, v1::Int, v2::Int)
-    # T = g[v1].tensor * g[v1, v2].tensor * g[v2].tensor
-end
-
-function contractgraph(g::MetaGraph)
+function contractgraph(tg::MetaGraph)
     # contracting the caps first saves a decent chunk of memory
-    contractcaps!(g)
+    contractcaps!(tg)
     
     # contract everything else in bulk
-    tensors = [g[e...].tensor for e in collect(edge_labels(g))]
-    append!(tensors, [g[v].tensor for v in collect(labels(g))])
-    
-    T = @visualize *(tensors...)
+    for e in edge_labels(tg)
+        contractedge!(tg, e...)
+    end
 end
 
 ### QUBIT GRAPH ###
