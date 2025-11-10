@@ -5,8 +5,6 @@ using GraphRecipes, Plots
 using ITensors
 using ITensorUnicodePlots
 
-include("tensorbuilder.jl")
-
 ###############################################################################
 # GS LATTICE CONSTRUCTION
 ###############################################################################
@@ -129,7 +127,7 @@ function add_cap!(rsg::MetaGraph, v::Int)
 
     # add new vertex
     nextindex = nv(rsg) + 1
-    rsg[nextindex] = rsgVertexData((GSCap, [v]))
+    rsg[nextindex] = rsgVertexData((StringTripletVector, [v]))
 
     # modify edge cycle in v - cap will be on the outside, though I don't think it matters
     insert!(rsg[v].ecycle, 2, nextindex)
@@ -147,7 +145,7 @@ function cap_all!(rsg::MetaGraph)
 end
 
 function rsgplot(rsg::MetaGraph)
-    type2shape = t -> t == GSTriangle ? :hexagon : t == GSCap ? :rect : :circle
+    type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
 
     commonargs = Dict(:title=>"Rotation System Graph (rsg)",
                       :curves=>false,
@@ -176,7 +174,7 @@ function rsg2ig(rsg::MetaGraph)
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=Union{igVertexData, Nothing},
-        edge_data_type=Set{Index},
+        edge_data_type=Vector{Index},
         graph_data=rsg
     )
 
@@ -194,7 +192,7 @@ function rsg2ig(rsg::MetaGraph)
         # copy edges attached to v and create index sets if they haven't already been made
         for endpoint in rsg[v].ecycle
             if !haskey(ig, v, endpoint)
-                ig[v, endpoint] = Set()
+                ig[v, endpoint] = []
             end
         end
 
@@ -211,8 +209,8 @@ function rsg2ig(rsg::MetaGraph)
 end
 
 function igplot(ig::MetaGraph)
-    type2shape = t -> t == GSTriangle ? :hexagon : t == GSCap ? :rect : :circle
-    idxset2label = s -> join([get_readable_index_id(i) for i in s], ';')
+    type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
+    idxset2label = s -> join([get_idtag(i) for i in s], ';')
 
     commonargs = Dict(:title=>"Index Graph (ig)",
                       :curves=>false,
@@ -302,32 +300,32 @@ const tgVertexData = @NamedTuple{type::TensorType, tensor::ITensor}
 
 function ig2tg(ig::MetaGraph)
     # initialize tensor graph with tensors at each vertex and reflection tensors at each edge
+    # graph_data is a running tensor index which uniquely labels new vertices created as we contract
+    # because that field is immutable we just wrap the int in a Vector
     tg = MetaGraph(
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=tgVertexData,
         edge_data_type=ITensor,
-        graph_data=Int # running tensor index so we uniquely label all tensors as we contract
+        graph_data=[maximum(labels(ig))+1]
     )
 
     # create all vertices and their tensors
     for v in labels(ig)
-        tg[v] = tgVertexData(ig[v].type, make_tensor(ig[v].type, ig[v].vinds, ig[v].pinds))
+        tg[v] = tgVertexData((ig[v].type, make_tensor(ig[v].type, ig[v].vinds, ig[v].pinds)))
     end
 
     # create all edges and their tensors
     for e in edge_labels(ig)
-        tg[e...] = StringTripleReflector(ig[e...]...)
+        tg[e...] = make_StringTripletReflector(ig[e...])
     end
 
-    # initial value for tensor index, to use when making new vertices while contracting
-    tg[] = maximum(labels(ig)) + 1
-    
     tg
 end
 
 function tgplot(tg::MetaGraph)
-    type2shape = t -> t == GSTriangle ? :hexagon : t == GSCap ? :rect : :circle
+    type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
+    idxset2label = s -> join([get_idtag(i) for i in s], ';')
 
     commonargs = Dict(:title=>"Tensor Graph (tg)",
                       :curves=>false,
@@ -354,14 +352,14 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     T = @visualize tg[v1].tensor * tg[v1, v2] * tg[v2].tensor
 
     # make new result vertex
-    w = tg[]
-    tg[] += 1
-    tg[w] = tgVertexData(Composite, T)
+    w = tg[][1]
+    tg.graph_data[1] += 1
+    tg[w] = tgVertexData((Composite, T))
 
     # get list of other vertices which are contracted with v1 and v2
-    nbs1 = setdiff(neighbors(tg, v1), [v2])
-    nbs2 = setdiff(neighbors(tg, v2), [v1])
-    
+    nbs1 = setdiff(collect(neighbor_labels(tg, v1)), [v2])
+    nbs2 = setdiff(collect(neighbor_labels(tg, v2)), [v1])
+
     # make connections to w from neighbors one by one, removing original edges at the same time
     for nb in nbs1
         tg[w, nb] = tg[v1, nb]
@@ -382,7 +380,7 @@ end
 function contractcaps!(tg::MetaGraph)
     caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
     for cap in caps 
-        v = neighbors(tg, cap)[1]
+        v = collect(neighbor_labels(tg, cap))[1]
         contractedge!(tg, cap, v)
     end
 end

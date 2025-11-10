@@ -85,13 +85,13 @@ end
 # MISC TENSORS
 ###############################################################################
 
-function StringTripletVector(vinds::Index, a::Int)
+function make_StringTripletVector(vinds::Vector{Index}, a::Int)
     if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 1")) end
     if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
     onehot(vinds[1]=>a)
 end
 
-function StringTripletReflector(vinds::Vector{Index})
+function make_StringTripletReflector(vinds::Vector{Index})
     if length(vinds) != 2 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
     for vind in vinds
         if vind.space != 5 throw(ArgumentError("got vind with dimension $(vind.space), not 5")) end
@@ -138,7 +138,7 @@ end
 # GROUND STATE TENSORS
 ###############################################################################
 
-function GSTriangle(vinds, pinds)
+function make_GSTriangle(vinds, pinds)
     # check that right number of vinds and pinds were passed in
     if length(vinds) != 3 throw(ArgumentError("got $(length(vinds)) vinds, not 3")) end
     if length(pinds) != 1 throw(ArgumentError("got $(length(pinds)) pinds, not 1")) end
@@ -152,15 +152,15 @@ function GSTriangle(vinds, pinds)
     ITensor(GSTriangle_data(), vinds..., pinds...)
 end
 
-function GSTail()
+function make_GSTail()
     nothing
 end
 
-function GSSquare()
+function make_GSSquare()
     nothing
 end
 
-function GSCircle()
+function make_GSCircle()
     nothing
 end
 
@@ -239,14 +239,14 @@ end
 function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}, data::Any=nothing)
     if type == StringTripletVector
         data = data == nothing ? 1 : data
-        return StringTripleVector(vinds, data)
+        return make_StringTripletVector(vinds, data)
     end
     if type == Composite
         throw(ArgumentError("Composite tensor types result from contractions"))
     end
     
     if type == GSTriangle
-        return GSTriangle(vinds, pinds)
+        return make_GSTriangle(vinds, pinds)
     end
 end
 
