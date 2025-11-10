@@ -1,14 +1,31 @@
 #=
-# This module creates the tensors which are used as building blocks for the networks
-# which represent full many-body states. They are all symmetric TODO, and follow the
-# convention that any physical index will be at the end of its index list, and have
-# a tag of pn, where n is a number. Virtual indices will have tags of in, where n is
-# a number. Those numbers n are just indices internal to the tensor, and have no
-# bearing on any other tensor or any relations between tensors. Physical and virtual
-# indices will also have a "phys" or "virt" tag.
+# This module provides an API to build the building-block tensors used to represent
+# the many-body state as a tensor network.
+#
+# Tensors have a type, which is provided by the TensorType enum and is used to
+# construct a tensor's indices and the tensor itself.
+#
+# Tensors have a set of virtual and a set of physical indices, each of which has a
+# typetag which can be either of
+#     virt
+#     phys
+# depending on the index type.
+#
+# Tensors have a label, which is stored in each of their indices.
+#
+# Tensor indices have a human-readable idtag which has the tensorlabel and an indexidx
+# indicating which virtual or physical index it is, which looks like
+#     tensorlabel-vm
+#     tensorlabel-pn
+# depending on whether the index was virtual or physical, where this is the mth or nth
+# virtual or physical index for this tensor respectively.
 =#
 
 using ITensors
+
+###############################################################################
+# FIBONACCI DATA
+###############################################################################
 
 # Fibonacci input category data; dim and N, F, R symbols
 using TensorKitSectors
@@ -19,22 +36,6 @@ function Gsymbol(
         d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
     )
     Fsymbol(a, b, c, d, e, f) / √(qdim(e)*qdim(f))
-end
-
-function virtualindices(T::ITensor)
-    [i for i in inds(T) if hastags(i, "virt")]
-end
-
-function physicalindices(T::ITensor)
-    [i for i in inds(T) if hastags(i, "phys")]
-end
-
-function virtualindices(V::Vector{Index})
-    [i for i in V if hastags(i, "virt")]
-end
-
-function physicalindices(V::Vector{Index})
-    [i for i in V if hastags(i, "phys")]
 end
 
 ###############################################################################
@@ -84,25 +85,27 @@ end
 # MISC TENSORS
 ###############################################################################
 
-function StringTripletVector(a::Int)
-    x = Index(5, "virt,i1")
-    onehot(x=>a)
+function StringTripletVector(vinds::Index, a::Int)
+    if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 1")) end
+    if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
+    onehot(vinds[1]=>a)
 end
 
-function StringTripletReflector(i1::Index, i2::Index)
-    if i1.space != i2.space != 5
-        throw(ArgumentError("indices must be dim 5"))
+function StringTripletReflector(vinds::Vector{Index})
+    if length(vinds) != 2 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
+    for vind in vinds
+        if vind.space != 5 throw(ArgumentError("got vind with dimension $(vind.space), not 5")) end
     end
     arr = [1 0 0 0 0;
            0 0 0 1 0;
            0 0 1 0 0;
            0 1 0 0 0;
            0 0 0 0 1]
-    ITensor(arr, i1, i2)
+    ITensor(arr, vinds...)
 end
 
 ###############################################################################
-# GROUND STATE TENSORS
+# GROUND STATE TENSOR DATA
 ###############################################################################
 
 function GSTriangle_data()
@@ -119,23 +122,130 @@ function GSTriangle_data()
     GSTriangle_data
 end
 
-function GSTriangle()
-    i1 = Index(5, "virt,i1")
-    i2 = Index(5, "virt,i2")
-    i3 = Index(5, "virt,i3")
-    p1 = Index(5, "phys,p1")
-    ITensor(GSTriangle_data(), i1, i2, i3, p1)
+function GSTail_data()
+    nothing
 end
 
-function GSSquare()
+function GSSquare_data()
+    nothing
 end
 
-function GSCircle()
+function GSCircle_data()
+    nothing
+end
+
+###############################################################################
+# GROUND STATE TENSORS
+###############################################################################
+
+function GSTriangle(vinds, pinds)
+    # check that right number of vinds and pinds were passed in
+    if length(vinds) != 3 throw(ArgumentError("got $(length(vinds)) vinds, not 3")) end
+    if length(pinds) != 1 throw(ArgumentError("got $(length(pinds)) pinds, not 1")) end
+
+    # check that indices have the right dimensionality
+    for vind in vinds
+        if vind.space != 5 throw(ArgumentError("got vind with dimension $(vind.space), not 5")) end
+    end
+    if pinds[1].space != 5 throw(ArgumentError("got pind with dimension $(pinds[1].space), not 5")) end
+
+    ITensor(GSTriangle_data(), vinds..., pinds...)
 end
 
 function GSTail()
+    nothing
+end
+
+function GSSquare()
+    nothing
+end
+
+function GSCircle()
+    nothing
 end
 
 ###############################################################################
 # EXCITED STATE TENSORS
 ###############################################################################
+
+
+###############################################################################
+# TENSOR BUILDER API
+###############################################################################
+
+@enum TensorType begin
+    # misc
+    StringTripletVector
+    Composite
+
+    # GS
+    GSTriangle
+    GSTail
+    GSSquare
+    GSCircle
+
+    # ES
+
+end
+
+function make_tensor_indices(tensorlabel::Any, type::TensorType)
+    # misc
+    if type == StringTripletVector
+        v1 = Index(5, "virt,$(tensorlabel)-v1")
+        return [v1], []
+    end
+    if type == Composite
+        throw(ArgumentError("Composite tensor types result from contractions"))
+    end
+
+    # GS
+    if type == GSTriangle
+        v1 = Index(5, "virt,$(tensorlabel)-v1")
+        v2 = Index(5, "virt,$(tensorlabel)-v2")
+        v3 = Index(5, "virt,$(tensorlabel)-v3")
+        p1 = Index(5, "phys,$(tensorlabel)-p1")
+        return [v1, v2, v3], [p1]
+    end
+    if type == GSTail
+        return nothing
+    end
+    if type == GSSquare
+        return nothing
+    end
+    if type == GSCircle
+        return nothing
+    end
+
+    # ES
+end
+
+function get_idtag(i::Index)
+    for tag in tags(i)
+        if '-' ∈ string(tag) return tag end
+    end
+    throw(ArgumentError("index $i doesn't have a tagid"))
+end
+
+function get_tensorlabel(i::Index)
+    idtag = get_idtag(i)
+    split(idtag, '-')[1]
+end
+
+function get_indexidx(i::Index)
+    idtag = get_idtag(i)
+    split(idtag, '-')[2]
+end
+
+function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}, data::Any=nothing)
+    if type == StringTripletVector
+        data = data == nothing ? 1 : data
+        return StringTripleVector(vinds, data)
+    end
+    if type == Composite
+        throw(ArgumentError("Composite tensor types result from contractions"))
+    end
+    
+    if type == GSTriangle
+        return GSTriangle(vinds, pinds)
+    end
+end

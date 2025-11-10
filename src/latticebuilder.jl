@@ -5,40 +5,11 @@ using GraphRecipes, Plots
 using ITensors
 using ITensorUnicodePlots
 
+include("tensorbuilder.jl")
+
 ###############################################################################
 # GS LATTICE CONSTRUCTION
 ###############################################################################
-
-@enum TensorType GSTriangle GSCap GSSquare GSCircle GSTail Composite
-
-function make_tensor_indices(tensorlabel::Any, type::TensorType)
-    if type == GSTriangle
-        v1 = Index(5, "virt,$(tensorlabel)-v1")
-        v2 = Index(5, "virt,$(tensorlabel)-v2")
-        v3 = Index(5, "virt,$(tensorlabel)-v3")
-        p1 = Index(5, "phys,$(tensorlabel)-p1")
-        return [v1, v2, v3], [p1]
-    end
-    if type == GSCap
-        v1 = Index(5, "virt,$(tensorlabel)-v1")
-        return [v1], []
-    end
-end
-
-function get_readable_index_id(i::Index)
-    for tag in tags(i)
-        if '-' ∈ string(tag) return tag end
-    end
-end
-
-function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index})
-    if type == GSTriangle
-        return GSTriangle(vinds, pinds)
-    end
-    if type == GSCap
-        return GSCap(vinds)
-    end
-end
 
 ### ROTATION SYSTEM GRAPH ###
 
@@ -189,7 +160,7 @@ function rsgplot(rsg::MetaGraph)
     labelstrings = map(string, labels(rsg))
     separateargs = Dict(:names=>collect(labelstrings),
                         :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgecolor=>Dict(code_for.((rsg,),t) => t ∈ rsg[] || reverse(t) ∈ rsg[] ? :red : :black for t in edge_labels(rsg)),
+                        :edgecolor=>Dict(code_for.((rsg,),e) => e ∈ rsg[] || reverse(e) ∈ rsg[] ? :red : :black for e in edge_labels(rsg)),
                         :nodeshape=>collect(map(type2shape, [rsg[l].type for l in labels(rsg)]))
                        )
     rsg_plot = GraphRecipes.graphplot(rsg; commonargs..., separateargs...)
@@ -206,7 +177,7 @@ function make_ig(rsg::MetaGraph)
         label_type=Int,
         vertex_data_type=Union{igVertexData, Nothing},
         edge_data_type=Set{Index},
-        graph_data=nothing
+        graph_data=rsg
     )
 
     # create all vertices to start
@@ -254,10 +225,75 @@ function igplot(ig::MetaGraph)
     labelstrings = map(string, labels(ig))
     separateargs = Dict(:names=>collect(labelstrings),
                         :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgelabel=>Dict(code_for.((ig,),t) => idxset2label(ig[t...]) for t in edge_labels(ig)),
+                        :edgelabel=>Dict(code_for.((ig,),e) => idxset2label(ig[e...]) for e in edge_labels(ig)),
                         :nodeshape=>collect(map(type2shape, [ig[l].type for l in labels(ig)]))
                        )
     ig_plot = GraphRecipes.graphplot(ig; commonargs..., separateargs...)
+end
+
+### QUBIT GRAPH ###
+
+function make_qg(ig::MetaGraph)
+    # initialize tensor graph with qubit values at edges
+    qg = MetaGraph(
+        Graph()::SimpleGraph;
+        label_type=Int,
+        vertex_data_type=Nothing,
+        edge_data_type=Bool,
+        graph_data=ig
+    )
+
+    # copy vertices which border edges with qubits
+    for v in labels(ig)
+        if length(ig[v].pinds) > 0
+            qg[v] = nothing
+        end
+    end
+
+    # copy edges with qubits on them
+    for e in edge_labels(ig)
+        if haskey(qg, e[1]) && haskey(qg, e[2])
+            qg[e...] = false
+        end
+    end
+    
+    qg
+end
+
+function fillfrompindvals(qg::MetaGraph, pindvals::Dict{Index, Int})
+    ig = qg[]
+    rsg = ig[]
+
+    for e in edge_labels(qg)
+        # get index of edge in ecycle
+        v1, v2 = e[1], e[2]
+        v2idx = findfirst(x->x==v2, rsg[v1].ecycle)
+        
+        # get ijk at v1
+        pind = ig[v1].pinds[1]
+        ijk = p2ijk(pindvals[pind])
+
+        # set qubit value on edge
+        qg[e...] = ijk[v2idx]
+    end
+
+end
+
+function qgplot(qg::MetaGraph)
+    commonargs = Dict(:title=>"Qubit Graph (qg)",
+                      :curves=>false,
+                      :fontsize=>4,
+                      :fillcolor=>:lightgray,
+                      :nodesize=>0.3,
+                     )
+    # graphplot uses Graphs.jl codes, so provide vertex properties in vertex code ordered list
+    # and provide edge properties as a dict of of (code1, code2) => edgeprop
+    labelstrings = map(string, labels(qg))
+    separateargs = Dict(:names=>collect(labelstrings),
+                        :node_weights=>[1/length(l) for l in labelstrings],
+                        :edgecolor=>Dict(code_for.((qg,),e) => qg[e...] ? :red : :black for e in edge_labels(qg)),
+                       )
+    qg_plot = GraphRecipes.graphplot(qg; commonargs..., separateargs...)
 end
 
 ### TENSOR GRAPH ###
@@ -304,7 +340,7 @@ function tgplot(tg::MetaGraph)
     labelstrings = map(string, labels(tg))
     separateargs = Dict(:names=>collect(labelstrings),
                         :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgelabel=>Dict(code_for.((tg,),t) => idxset2label(inds(tg[t...])) for t in edge_labels(tg)),
+                        :edgelabel=>Dict(code_for.((tg,),e) => idxset2label(inds(tg[e...])) for e in edge_labels(tg)),
                         :nodeshape=>collect(map(type2shape, [tg[l].type for l in labels(tg)]))
                        )
     tg_plot = GraphRecipes.graphplot(tg; commonargs..., separateargs...)
@@ -360,7 +396,5 @@ function contractgraph(tg::MetaGraph)
         contractedge!(tg, e...)
     end
 end
-
-### QUBIT GRAPH ###
 
 
