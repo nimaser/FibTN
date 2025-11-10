@@ -170,7 +170,7 @@ end
 
 const igVertexData = @NamedTuple{type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}}
 
-function make_ig(rsg::MetaGraph)
+function rsg2ig(rsg::MetaGraph)
     # initialize index graph with tensor indices at each vertex and contracted indices at edges
     ig = MetaGraph(
         Graph()::SimpleGraph;
@@ -233,7 +233,7 @@ end
 
 ### QUBIT GRAPH ###
 
-function make_qg(ig::MetaGraph)
+function ig2qg(ig::MetaGraph)
     # initialize tensor graph with qubit values at edges
     qg = MetaGraph(
         Graph()::SimpleGraph;
@@ -300,7 +300,7 @@ end
 
 const tgVertexData = @NamedTuple{type::TensorType, tensor::ITensor}
 
-function make_tg(ig::MetaGraph)
+function ig2tg(ig::MetaGraph)
     # initialize tensor graph with tensors at each vertex and reflection tensors at each edge
     tg = MetaGraph(
         Graph()::SimpleGraph;
@@ -387,14 +387,33 @@ function contractcaps!(tg::MetaGraph)
     end
 end
 
-function contractgraph(tg::MetaGraph)
+function contractgraph!(tg::MetaGraph)
     # contracting the caps first saves a decent chunk of memory
     contractcaps!(tg)
     
-    # contract everything else in bulk
-    for e in edge_labels(tg)
+    # contract everything else at once
+    while nv(tg) > 1
+        e = edge_labels(tg)[1]
         contractedge!(tg, e...)
     end
+
+    # get tensor belonging to final vertex
+    z = labels(tg)[1]
+    T = z.tensor
 end
 
+function tensor2states(T::ITensor)
+    # physical indices are the only ones left after contraction is finished
+    pinds = inds(T)
+
+    # get nonzero entries/states
+    Tarr = array(T)
+    nzidxs = findall(!iszero, Tarr) # each entry describes a state in terms of its pind values
+
+    # get mapping from pind to pval for a specific state s (ie entry in nzidxs)
+    pind2pval = s -> Dict(pinds[i]=>v for (i, v) in enumerate(s))
+
+    # make dict from state to (dict from pind to pval), state amplitude
+    states = Dict(s=>(pind2pval(s), Tarr[s]) for s in nzidxs)
+end    
 

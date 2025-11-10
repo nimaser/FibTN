@@ -249,3 +249,4 @@ function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index
         return GSTriangle(vinds, pinds)
     end
 end
+
