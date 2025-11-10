@@ -306,7 +306,7 @@ function ig2tg(ig::MetaGraph)
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=tgVertexData,
-        edge_data_type=ITensor,
+        edge_data_type=Set{ITensor},
         graph_data=[maximum(labels(ig))+1]
     )
 
@@ -317,7 +317,7 @@ function ig2tg(ig::MetaGraph)
 
     # create all edges and their tensors
     for e in edge_labels(ig)
-        tg[e...] = make_StringTripletReflector(ig[e...])
+        tg[e...] = Set([make_StringTripletReflector(ig[e...])])
     end
 
     tg
@@ -326,6 +326,7 @@ end
 function tgplot(tg::MetaGraph)
     type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
     idxset2label = s -> join([get_idtag(i) for i in s], ';')
+    tensorset2label = ts -> join([idxset2label(inds(t)) for t in ts], " ")
 
     commonargs = Dict(:title=>"Tensor Graph (tg)",
                       :curves=>false,
@@ -338,7 +339,7 @@ function tgplot(tg::MetaGraph)
     labelstrings = map(string, labels(tg))
     separateargs = Dict(:names=>collect(labelstrings),
                         :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgelabel=>Dict(code_for.((tg,),e) => idxset2label(inds(tg[e...])) for e in edge_labels(tg)),
+                        :edgelabel=>Dict(code_for.((tg,),e) => tensorset2label(tg[e...]) for e in edge_labels(tg)),
                         :nodeshape=>collect(map(type2shape, [tg[l].type for l in labels(tg)]))
                        )
     tg_plot = GraphRecipes.graphplot(tg; commonargs..., separateargs...)
@@ -349,7 +350,7 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     if !haskey(tg, v1, v2) throw(ErrorException("no edge between vertices $v1 and $v2")) end
 
     # contract tensors on v1, edge, and v2
-    T = @visualize tg[v1].tensor * tg[v1, v2] * tg[v2].tensor
+    T = @visualize *(tg[v1].tensor,  tg[v2].tensor, prod(tg[v1, v2]))
 
     # make new result vertex
     w = tg[][1]
@@ -365,8 +366,16 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
         tg[w, nb] = tg[v1, nb]
         rem_edge!(tg, code_for(tg, v1), code_for(tg, nb))
     end
+
+    # vertices which contract with both v1 and v2 would induce multiple edges between w and them, but
+    # given that I am having difficulty getting multigraph functionality using MetaGraphsNext.jl, we
+    # will just toss all of the contractions from those multiple edges into a single edge's tensor set
     for nb in nbs2
-        tg[w, nb] = tg[v2, nb]
+        if haskey(tg, w, nb)
+            push!(tg[w, nb], tg[v2, nb]...)
+        else
+            tg[w, nb] = tg[v2, nb]
+        end
         rem_edge!(tg, code_for(tg, v2), code_for(tg, nb))
     end
 
