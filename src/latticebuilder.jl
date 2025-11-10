@@ -5,272 +5,189 @@ using GraphRecipes, Plots
 using ITensors
 using ITensorUnicodePlots
 
-mutable struct VertexData
-    tensor::ITensor
-end
-
-mutable struct EdgeData
-    indices::Vector{Index}
-    tensor::ITensor
-    EdgeData(indices) = new(indices)
-end
-
 ###############################################################################
 # GS LATTICE CONSTRUCTION
 ###############################################################################
 
+@enum TensorType GSTriangle GSCap GSSquare GSCircle GSTail
+
+### ROTATION SYSTEM GRAPH ###
+
+const rsgEdgeCycle = Vector{Int}
+const rsgVertexData = @NamedTuple{type::TensorType, ecycle::rsgEdgeCycle}
+const rsgBoundaryEdgeSet = Set{Tuple{Int, Int}}
+
 function new_plaquette(order::Int)
-    # initialize new graph
-    g = MetaGraph(
+    # check argument
+    if order <= 2 throw(ArgumentError("Plaquettes must be of order >= 3")) end
+
+    # initialize new graph with tensor type and edge cycle stored at vertices
+    rsg = MetaGraph(
         Graph()::SimpleGraph;
         label_type=Int,
-        vertex_data_type=VertexData,
-        edge_data_type=EdgeData,
-        graph_data=nothing
+        vertex_data_type=rsgVertexData,
+        edge_data_type=Nothing,
+        graph_data=rsgBoundaryEdgeSet()
     )
-    add_plaquette!(g, order)
-    g
-end
 
-function add_plaquette!(g::MetaGraph, order::Int)
-    if order == 2 throw(ArgumentError("Plaquettes cannot be of order two")) end
-
-    # add new vertices
-    startindex = nv(g)
-    for i in 1:order
-        g[startindex + i] = VertexData(GSTriangle())
+    # create new vertices
+    rsg[1] = rsgVertexData((GSTriangle, [order, 2]))
+    for i in 2:order-1
+        rsg[i] = rsgVertexData((GSTriangle, [i-1, i+1]))
     end
-    # add new edges
+    rsg[order] = rsgVertexData((GSTriangle, [order-1, 1]))
+
+    # create new edges and add them to boundary set
     for i in 1:order-1
-        g[startindex + i, startindex + i + 1] = EdgeData([])
+        rsg[i, i+1] = nothing
+        push!(rsg[], (i, i+1))
     end
-    g[startindex + order, startindex + 1] = EdgeData([])
+    rsg[order, 1] = nothing
+    push!(rsg[], (order, 1))
+
+    rsg
 end
 
-function add_chain!(g::MetaGraph, links::Int, v1::Int, v2::Int, vdata=(), edata=nothing)
-    if degree(g, v1) >= 3 throw(ErrorException("Cannot add edge to degree 3 vertex $v1")) end 
-    if degree(g, v2) >= 3 throw(ErrorException("Cannot add edge to degree 3 vertex $v2")) end
-    if links == 1 && haskey(g, v1, v2)
-        throw(ErrorException("Cannot add multiple edges between vertices"))
+function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
+    # check arguments
+    if order <= 2 throw(ArgumentError("Plaquettes must be of order >= 3, got $order")) end
+    if v1 == v2 throw(ArgumentError("v1 and v2 must be different, got $v1, $v2")) end
+
+    # check that v1 and v2 will not get too many edges
+    if degree(rsg, code_for(rsg, v1)) != 2 throw(ErrorException("vertex $v1 must be deg 2")) end
+    if degree(rsg, code_for(rsg, v2)) != 2 throw(ErrorException("vertex $v2 must be deg 2")) end
+
+    # check that v1 and v2 are on the boundary
+    v1valid = v2valid = false
+    for edge in rsg[]
+        if edge[1] == v1 || edge[2] == v1
+            v1valid = true
+        end
+        if edge[1] == v2 || edge[2] == v2
+            v2valid = true
+        end
+        if v1valid && v2valid break end
     end
-    if v1 == v2
-        if links == 1 && degree(g, v1) > 1
-            throw(ErrorException("Cannot add two edges to degree $(degree(g, v1)) vertex"))
-        end
-        if links == 2
-            throw(ArgumentError("Plaquettes cannot be of order two"))
-        end
+    if !v1valid throw(ErrorException("vertex $v1 not on the boundary")) end
+    if !v2valid throw(ErrorException("vertex $v2 not on the boundary")) end
+
+    # make copy so we can restore state if there's an error
+    B = deepcopy(rsg[])
+    
+    # remove boundary between v1 and v2, counting number of edges along the way
+    prev = rsg[v1].ecycle[1] # v1 must be degree 2 so prev edge is at index 1
+    next = v1
+    numedges = 0
+    while true
+        previdx = findfirst(x->x==prev, rsg[next].ecycle)
+        prev, next = next, rsg[next].ecycle[previdx+1]
+        @show prev, next
+        delete!(rsg[], (prev, next))
+        numedges += 1
+        if next == v2 break end
+    end
+
+    # if the plaquette is too small, revert boundary set and error
+    edgestomake = order - numedges
+    if edgestomake < 1
+        empty!(rsg[])
+        push!(rsg[], B...)
+        throw(ErrorException("can't make order $order plaquette with $numedges edges between given vertices"))
     end
 
     # add new vertices
-    startindex=nv(g)
-    for i in 1:links-1
-        g[startindex + i] = VertexData(GSTriangle())
+    @show edgestomake
+    startindex=nv(rsg) + 1
+    if edgestomake == 2
+        rsg[startindex] = rsgVertexData((GSTriangle, [v1, v2]))
+    else
+        rsg[startindex] = rsgVertexData((GSTriangle, [v1, startindex+1]))
+        for i in startindex+1:startindex+edgestomake-3
+            rsg[i] = rsgVertexData((GSTriangle, [i-1, i+1]))
+        end
+        rsg[startindex+edgestomake-2] = rsgVertexData((GSTriangle, [startindex+edgestomake-3, v2]))
     end
 
-    # add new edges
-    g[v1, startindex + 1] = EdgeData([])
-    for i in 1:links-2
-        g[startindex + i, startindex + i + 1] = EdgeData([])
+    # modify edge cycles of v1 and v2
+    insert!(rsg[v1].ecycle, 2, startindex)
+    insert!(rsg[v2].ecycle, 2, startindex+edgestomake-2)
+
+    # add new edges and add them to the boundary
+    rsg[v1, startindex] = nothing
+    push!(rsg[], (v1, startindex))
+    for i in startindex:startindex+edgestomake-3
+        rsg[i, i + 1] = nothing
+        push!(rsg[], (i, i+1))
     end
-    g[startindex + links - 1, v2] = EdgeData([])
+    rsg[startindex+edgestomake-2, v2] = nothing
+    push!(rsg[], (startindex+edgestomake-2, v2))
+
+    nothing
 end
 
-function add_cap!(g::MetaGraph, v)
-    if degree(g, v) >= 3 throw(ErrorException("Cannot add cap to degree 3 vertex $v")) end
- 
+function add_cap!(rsg::MetaGraph, v)
+    # check that v will not get too many edges
+    if degree(rsg, code_for(rsg, v)) >= 3 throw(ErrorException("Cannot add cap to vertex $v")) end
+
     # add new vertex
     nextindex = nv(g) + 1
-    g[nextindex] = VertexData(StringTripletVector(1))
+    rsg[nextindex] = rsgVertexData((GSCap, [v]))
+
+    # modify edge cycle in v - cap will be on the outside, though I don't think it matters
+    insert!(rsg[v].ecycle, 2, nextindex)
 
     # add new edge
-    g[v, nextindex] = EdgeData([])
+    rsg[v, nextindex] = nothing
+
+    nothing
 end
 
-function cap_remaining!(g::MetaGraph)
-    for v in collect(labels(g))
-        if degree(g, v) == 2 add_cap!(g, v) end
+function cap_all!(rsg::MetaGraph)
+    for v in collect(labels(rsg))
+        if degree(rsg, code_for(rsg, v)) == 2 add_cap!(rsg, v) end
     end
 end
 
-###############################################################################
-# GS LATTICE INITIATION
-###############################################################################
+### INDEX GRAPH ###
 
-function initvertex(g::MetaGraph, v::Int)
-    # put an index on each edge
-    nbs = neighbor_labels(g, v)
-    virtids = virtualindices(g[v].tensor)
-    if length(nbs) != length(virtids)
-        throw(ErrorException("must have one virt idx per edge"))
-    end
-    for (nb, idx) in zip(nbs, virtids)
-        push!(g[v, nb].indices, idx)
-    end
-end
+#function make_ig(rsg::MetaGraph)
+#    # initialize index graph with tensor indices at each vertex and contracted indices at edges
+#    ig = MetaGraph(
+#        Graph()::SimpleGraph;
+#        label_type=Int,
+#        vertex_data_type=Set{Index},
+#        edge_data_type=Set{Index},
+#        graph_data=nothing
+#    )
+#
+#    for v in labels(rsg)
+#        # copy vertex and create indices
+#        v1 = Index(5, "virt,$(v)-v1")
+#        v2 = Index(5, "virt,$(v)-v2")
+#        v3 = Index(5, "virt,$(v)-v3")
+#        p1 = Index(5, "phys,$(v)-p1")
+#        ig[v] = Set(indices)
+#        
+#        # copy edges and create index sets if they haven't already been made
+#        for endpoint in rsg[v]
+#            if !haskey(ig, v, endpoint)
+#                ig[v, endpoint] = Set()
+#            end
+#        end
+#
+#        # assign indices to edges in clockwise order
+#        
+#
+#    end
+#    
+#    ig
+#end
 
-function initedge(g::MetaGraph, v1::Int, v2::Int)
-    if length(g[v1, v2].indices) != 2 throw(ErrorException("edge has too many indices")) end
-    # g[v1, v2].tensor = StringTripletReflector(g[v1, v2].indices...)
-    g[v1, v2].tensor = ITensors.δ(g[v1, v2].indices...)
-end
+### TENSOR GRAPH ###
 
-function populatetensors(g::MetaGraph)
-    # iterate over vertices, giving them each a new tensor of the appropriate type,
-    # and placing their indices in the appropriate edges
-    for v in collect(labels(g))
-        initvertex(g, v)
-    end
 
-    # iterate over edges, placing a reflection tensor on each one
-    for (v1, v2) in collect(edge_labels(g))
-        initedge(g, v1, v2)
-    end
-end
 
-###############################################################################
-# GS LATTICE CONTRACTION
-###############################################################################
 
-function contractcap!(g::MetaGraph, c::Int)
-    nbs = collect(neighbor_labels(g, c))
-    if length(nbs) != 1 throw(ArgumentError("vertex $c is not a cap; it has degree >1")) end
-    v = nbs[1]
+### QUBIT GRAPH ###
 
-    # contract the tensors from the two vertices and edge, then store in remaining vertex
-    g[v].tensor = g[v].tensor *g[v, c].tensor * g[c].tensor
-
-    # remove cap and connecting edge
-    rem_edge!(g, code_for(g, v), code_for(g, c))
-    rem_vertex!(g, code_for(g, c))
-end
-
-function contractcaps!(g::MetaGraph)
-    caps = [l for l in collect(labels(g)) if degree(g, code_for(g, l)) == 1]
-    for cap in caps contractcap!(g, cap) end
-end
-
-function contractedge!(g::MetaGraph, v1::Int, v2::Int)
-    # T = g[v1].tensor * g[v1, v2].tensor * g[v2].tensor
-end
-
-function contractgraph(g::MetaGraph)
-    # contracting the caps first saves a decent chunk of memory
-    contractcaps!(g)
-    
-    # contract everything else in bulk
-    tensors = [g[e...].tensor for e in collect(edge_labels(g))]
-    append!(tensors, [g[v].tensor for v in collect(labels(g))])
-    
-    T = @visualize *(tensors...)
-end
-
-###############################################################################
-# GS LATTICE VISUALIZATION 
-###############################################################################
-
-function metagraphplot(mg::MetaGraph, vlabels::Bool=true, elabels::Bool=true)
-    # graphplot indices labels by Graphs.jl codes, so we create an array of
-    # vlabels in code order, and a dict of (code1, code2) => elabel
-    args = Dict(:curves=>false, :nodesize=>0.1, :node_weights=>ones(length(labels(mg))))
-    labelargs = []
-    if vlabels push!(labelargs, :names=>collect(map(string, labels(mg)))) end
-    if elabels push!(labelargs, :edgelabel=>Dict(code_for.((mg,), t) => mg[t...] for t in collect(edge_labels(mg)))) end
-    GraphRecipes.graphplot(mg; args..., labelargs...)
-end
-
-function alignmentlattice(g::MetaGraph)
-    a = MetaGraph(
-        Graph()::SimpleGraph;
-        label_type=Int,
-        vertex_data_type=Vector{Index},
-        edge_data_type=Vector{Index},
-        graph_data = nothing
-    )
-    for v in collect(labels(g))
-        a[v] = [i for i in inds(g[v].tensor)]
-    end
-    for (v1, v2) in collect(edge_labels(g))
-        a[v1, v2] = g[v1, v2].indices
-    end
-    a
-end
-
-function edge2physicalindexandorientation(a::MetaGraph, v1::Int, v2::Int)
-    # given an edge, get a virtual index along it
-    i = a[v1, v2][1]
-    # find out which virtual index it was among the tensor it came from
-    if hastags(i, "i1") o = 1
-    elseif hastags(i, "i2") o = 2
-    elseif hastags(i, "i3") o = 3
-    end
-    # determine the physical index of the tensor it came from
-    p = i ∈ a[v1] ? physicalindices(a[v1])[1] : physicalindices(a[v2])[2]
-    p, o
-end
-
-function qubitlattice(a::MetaGraph)
-    q = MetaGraph(
-        Graph()::SimpleGraph;
-        label_type=Int,
-        vertex_data_type=Nothing,
-        edge_data_type=Bool,
-        graph_data=nothing
-    )
-    for v in collect(labels(a))
-        q[v] = nothing
-    end
-    for (v1, v2) in collect(edge_labels(a))
-        q[v1, v2] = false
-    end
-    q
-end
-
-function getnzstates(T)
-    Tarr = array(T)
-    nzi = findall(!iszero, Tarr)
-    s = Dict(idx=>T[idx] for idx in nzi)
-end
-
-function generatequbitlattices(T::ITensor, a::MetaGraph, q::MetaGraph)
-    qgraphs = []
-
-    # remove 0 amplitude states
-    states = getnzstates(T)
-
-    # create mapping from Index to index in vals
-    Tidx2i_map = Dict(idx=>i for (i, idx) in enumerate(inds(T)))
-
-    # for each state
-    for (vals, amp) in states
-        # for each edge in the graph
-        for e in collect(edge_labels(q))
-            # find the pindex and orientation of the qubit within that index 
-            p, o = edge2physicalindexandorientation(a, e...)
-            # find the value of that index, and thus the value of the qubit
-            pval = vals[Tidx2i_map[p]]
-            qval = p2ijk(pval)[o]
-            q[e...] = qval == FibonacciAnyon(:I) ? 0 : 1
-        end
-        push!(qgraphs, deepcopy(q))
-    end
-
-    qgraphs
-end
-
-function qubitlatticeplot(qgraphs::Any, amps::Any=nothing)
-    commonargs = Dict(:curves=>false, :nodeshape=>:circle, :fillcolor=>:lightgray, :nodesize=>0.1, :node_weights=>ones(length(labels(qgraphs[1]))))
-
-    qgraphplots = []
-    for (i, q) in enumerate(qgraphs)
-        lc = Dict(code_for.((q,),t) => q[t...] ? :red : :black for t in collect(edge_labels(q)))
-        if amps != nothing
-            gp = GraphRecipes.graphplot(q, title=amps[i], edgecolor=lc; commonargs...)
-        else
-            gp = GraphRecipes.graphplot(q, edgecolor=lc; commonargs...)
-        end
-        push!(qgraphplots, gp)
-    end
-    plot(qgraphplots...)
-end
 
