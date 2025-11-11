@@ -405,9 +405,9 @@ end
 function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
     qgs = []
     for (idx, (pvals, amp)) in states
-        @show idx, pvals, amp
         fillfrompvals(qg, pvals)
         qg_plot = qgplot(qg)
+        qg_plot.subplots[1].attr[:title] = amp
         push!(qgs, qg_plot)
     end
     plot(qgs...)
