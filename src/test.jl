@@ -1,6 +1,6 @@
 rsg = new_plaquette(6)
-add_plaquette!(rsg, 6, 1, 6)
-add_plaquette!(rsg, 10, 2, 6)
+#add_plaquette!(rsg, 6, 1, 6)
+#add_plaquette!(rsg, 10, 2, 6)
 cap_all!(rsg)
 rsgplot(rsg)
 
@@ -9,4 +9,5 @@ qg = ig2qg(ig)
 tg = ig2tg(ig)
 
 tgplot(tg)
-
+T = contractgraph!(tg)
+s = tensor2states(T)
