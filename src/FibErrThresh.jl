@@ -3,7 +3,9 @@
 
 module FibErrThresh
 
-include("utiltensors.jl")
-include("chain_latticebuilder.jl")
+include("tensorbuilder.jl")
+include("latticebuilder.jl")
+
+export
 
 end # module FibErrThresh

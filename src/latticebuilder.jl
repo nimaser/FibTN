@@ -1,9 +1,21 @@
+#=
+# This module provides an API to build ground state lattices.
+#
+#
+#
+#
+=#
+
+module latticebuilder
+
 using Graphs
 using MetaGraphsNext
 using GraphRecipes, Plots
 
 using ITensors
 using ITensorUnicodePlots
+
+using LatticeBuilder
 
 ###############################################################################
 # GS LATTICE CONSTRUCTION
@@ -258,7 +270,7 @@ function ig2tg(ig::MetaGraph)
 
     # create all edges and their tensors
     for e in edge_labels(ig)
-        tg[e...] = Set([make_StringTripletReflector(ig[e...])])
+        tg[e...] = Set([make_tensor(StringTripletReflector, ig[e...], [])])
     end
 
     tg
@@ -412,3 +424,5 @@ function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict
     end
     plot(qgs...)
 end
+
+end # module LatticeBuilder

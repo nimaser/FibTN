@@ -21,6 +21,15 @@
 # virtual or physical index for this tensor respectively.
 =#
 
+module TensorBuilder
+
+export Gsymbol
+export ijk2p, p2ijk, abc2etc
+export TensorType
+export make_tensor_indices
+export get_idtag, get_tensorlabel, get_indexidx
+export make_tensor
+
 using ITensors
 
 ###############################################################################
@@ -176,6 +185,7 @@ end
 @enum TensorType begin
     # misc
     StringTripletVector
+    StringTripletReflector
     Composite
 
     # GS
@@ -193,6 +203,9 @@ function make_tensor_indices(tensorlabel::Any, type::TensorType)
     if type == StringTripletVector
         v1 = Index(5, "virt,$(tensorlabel)-v1")
         return [v1], []
+    end
+    if type == StringTripletReflector
+        throw(ArgumentError("StringTripletReflector uses indices of the tensors it is contracting"))
     end
     if type == Composite
         throw(ArgumentError("Composite tensor types result from contractions"))
@@ -241,12 +254,16 @@ function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index
         data = data == nothing ? 1 : data
         return make_StringTripletVector(vinds, data)
     end
+    if type == StringTripletReflector
+        return make_StringTripletReflector(vinds)
+    end
     if type == Composite
         throw(ArgumentError("Composite tensor types result from contractions"))
     end
-    
+
     if type == GSTriangle
         return make_GSTriangle(vinds, pinds)
     end
 end
 
+end # module TensorBuilder
