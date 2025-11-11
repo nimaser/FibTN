@@ -6,7 +6,7 @@
 #
 =#
 
-module latticebuilder
+using Printf
 
 using Graphs
 using MetaGraphsNext
@@ -14,8 +14,6 @@ using GraphRecipes, Plots
 
 using ITensors
 using ITensorUnicodePlots
-
-using LatticeBuilder
 
 ###############################################################################
 # GS LATTICE CONSTRUCTION
@@ -253,14 +251,12 @@ const tgVertexData = @NamedTuple{type::TensorType, tensor::ITensor}
 
 function ig2tg(ig::MetaGraph)
     # initialize tensor graph with tensors at each vertex and reflection tensors at each edge
-    # graph_data is a running tensor index which uniquely labels new vertices created as we contract
-    # because that field is immutable we just wrap the int in a Vector
     tg = MetaGraph(
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=tgVertexData,
         edge_data_type=Set{ITensor},
-        graph_data=[maximum(labels(ig))+1]
+        graph_data=ig
     )
 
     # create all vertices and their tensors
@@ -270,7 +266,7 @@ function ig2tg(ig::MetaGraph)
 
     # create all edges and their tensors
     for e in edge_labels(ig)
-        tg[e...] = Set([make_tensor(StringTripletReflector, ig[e...], [])])
+        tg[e...] = Set([make_tensor(StringTripletReflector, ig[e...], Index[])])
     end
 
     tg
@@ -280,41 +276,43 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     # check that an edge actually exists between v1 and v2
     if !haskey(tg, v1, v2) throw(ErrorException("no edge between vertices $v1 and $v2")) end
 
-    # contract tensors on v1, edge, and v2
-    T = @visualize *(tg[v1].tensor,  tg[v2].tensor, prod(tg[v1, v2]))
-
-    # make new result vertex
-    w = tg[][1]
-    tg.graph_data[1] += 1
-    tg[w] = tgVertexData((Composite, T))
-
-    # get list of other vertices which are contracted with v1 and v2
-    nbs1 = setdiff(collect(neighbor_labels(tg, v1)), [v2])
-    nbs2 = setdiff(collect(neighbor_labels(tg, v2)), [v1])
-
-    # make connections to w from neighbors one by one, removing original edges at the same time
-    for nb in nbs1
-        tg[w, nb] = tg[v1, nb]
-        rem_edge!(tg, code_for(tg, v1), code_for(tg, nb))
+    # contract tensors on v1, edge, and v2, going contraction by contraction to reduce memory usage
+    T = 1
+    for t in tg[v1, v2]
+        T = @visualize tg[v1].tensor * t * tg[v2].tensor
     end
 
-    # vertices which contract with both v1 and v2 would induce multiple edges between w and them, but
-    # given that I am having difficulty getting multigraph functionality using MetaGraphsNext.jl, we
-    # will just toss all of the contractions from those multiple edges into a single edge's tensor set
+    # we will use v1 as the new result vertex
+    tg[v1].type = Composite
+    tg[v1].tensor = T
+
+    # get list of vertices which are contracted with v2, not including v1
+    nbs2 = setdiff(collect(neighbor_labels(tg, v2)), [v1])
+
+    # vertices which contract with both v1 and v2 would induce multiple edges between the new v1 and
+    # them, but we don't want to use multigraphs, so we just toss all of the contractions from those
+    # multiple edges into a single edge's tensor set
     for nb in nbs2
-        if haskey(tg, w, nb)
-            push!(tg[w, nb], tg[v2, nb]...)
+        if haskey(tg, v1, nb)
+            push!(tg[v1, nb], tg[v2, nb]...)
         else
-            tg[w, nb] = tg[v2, nb]
+            tg[v1, nb] = tg[v2, nb]
         end
         rem_edge!(tg, code_for(tg, v2), code_for(tg, nb))
     end
 
-    # remove v1 and v2
-    rem_vertex!(tg, code_for(tg, v1))
+    # remove v2
     rem_vertex!(tg, code_for(tg, v2))
 
     nothing
+end
+
+function contractcaps!(tg::MetaGraph)
+    caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
+    for cap in caps 
+        v = collect(neighbor_labels(tg, cap))[1]
+        contractedge!(tg, cap, v)
+    end
 end
 
 function contractgraph!(tg::MetaGraph)
@@ -330,14 +328,6 @@ function contractgraph!(tg::MetaGraph)
     # get tensor belonging to final vertex
     z = collect(labels(tg))[1]
     T = tg[z].tensor
-end
-
-function contractcaps!(tg::MetaGraph)
-    caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
-    for cap in caps 
-        v = collect(neighbor_labels(tg, cap))[1]
-        contractedge!(tg, cap, v)
-    end
 end
 
 ###############################################################################
@@ -376,13 +366,15 @@ function igplot(ig::MetaGraph)
     ig_plot = GraphRecipes.graphplot(ig; commonargs..., separateargs...)
 end
 
-function qgplot(qg::MetaGraph)
+function qgplot(qg::MetaGraph, vlabels=true)
     labelstrings = map(string, labels(qg))
     separateargs = Dict(:title=>"Qubit Graph (qg)",
-                        :names=>collect(labelstrings),
-                        :node_weights=>[1/length(l) for l in labelstrings],
                         :edgecolor=>Dict(code_for.((qg,),e) => qg[e...] ? :red : :black for e in edge_labels(qg)),
                        )
+    if vlabels
+        separateargs[:names] = collect(labelstrings)
+        separateargs[:node_weights] = [1/length(l) for l in labelstrings]
+    end
     qg_plot = GraphRecipes.graphplot(qg; commonargs..., separateargs...)
 end
 
@@ -414,15 +406,14 @@ function tensor2states(T::ITensor)
     states = Dict(s=>(pind2pval(Tuple(s)), Tarr[s]) for s in nzidxs)
 end
 
-function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
+function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}, vlabels=true)
     qgs = []
     for (idx, (pvals, amp)) in states
         fillfrompvals(qg, pvals)
-        qg_plot = qgplot(qg)
-        qg_plot.subplots[1].attr[:title] = amp
+        qg_plot = qgplot(qg, vlabels)
+        qg_plot.subplots[1].attr[:title] = "$(@sprintf("%.2f", amp))"
+        qg_plot.subplots[1].attr[:titlefontsize] = 4
         push!(qgs, qg_plot)
     end
     plot(qgs...)
 end
-
-end # module LatticeBuilder

@@ -1,5 +1,5 @@
 #=
-# This module provides an API to build the building-block tensors used to represent
+# This file provides an API to build the building-block tensors used to represent
 # the many-body state as a tensor network.
 #
 # Tensors have a type, which is provided by the TensorType enum and is used to
@@ -20,15 +20,6 @@
 # depending on whether the index was virtual or physical, where this is the mth or nth
 # virtual or physical index for this tensor respectively.
 =#
-
-module TensorBuilder
-
-export Gsymbol
-export ijk2p, p2ijk, abc2etc
-export TensorType
-export make_tensor_indices
-export get_idtag, get_tensorlabel, get_indexidx
-export make_tensor
 
 using ITensors
 
@@ -265,5 +256,3 @@ function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index
         return make_GSTriangle(vinds, pinds)
     end
 end
-
-end # module TensorBuilder
