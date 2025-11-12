@@ -102,11 +102,20 @@ function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
         throw(ErrorException("can't make order $order plaquette with $numedges edges between given vertices"))
     end
 
+    # if only one edge needs to be added, add it to graph and boundary set, modify edge cycles, and dip
+    if edgestomake == 1
+        rsg[v1, v2] = nothing
+        push!(rsg[], (v1, v2))
+        insert!(rsg[v1].ecycle, 2, v2)
+        insert!(rsg[v2].ecycle, 2, v1)
+        return
+    end
+
     # add new vertices
     startindex=nv(rsg) + 1
     if edgestomake == 2
         rsg[startindex] = rsgVertexData((GSTriangle, [v1, v2]))
-    else
+    elseif edgestomake > 2
         rsg[startindex] = rsgVertexData((GSTriangle, [v1, startindex+1]))
         for i in startindex+1:startindex+edgestomake-3
             rsg[i] = rsgVertexData((GSTriangle, [i-1, i+1]))
@@ -247,7 +256,7 @@ end
 
 ### TENSOR GRAPH ###
 
-const tgVertexData = @NamedTuple{type::TensorType, tensor::ITensor}
+mutable struct tgVertexData type::TensorType; tensor::ITensor end
 
 function ig2tg(ig::MetaGraph)
     # initialize tensor graph with tensors at each vertex and reflection tensors at each edge
@@ -261,7 +270,7 @@ function ig2tg(ig::MetaGraph)
 
     # create all vertices and their tensors
     for v in labels(ig)
-        tg[v] = tgVertexData((ig[v].type, make_tensor(ig[v].type, ig[v].vinds, ig[v].pinds)))
+        tg[v] = tgVertexData(ig[v].type, make_tensor(ig[v].type, ig[v].vinds, ig[v].pinds))
     end
 
     # create all edges and their tensors
@@ -276,15 +285,13 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     # check that an edge actually exists between v1 and v2
     if !haskey(tg, v1, v2) throw(ErrorException("no edge between vertices $v1 and $v2")) end
 
-    # contract tensors on v1, edge, and v2, going contraction by contraction to reduce memory usage
-    T = 1
+    # contract tensors on v1, edge, and v2, going contraction by contraction to reduce memory usage;
+    # we use v1 as the new result vertex
     for t in tg[v1, v2]
-        T = @visualize tg[v1].tensor * t * tg[v2].tensor
+        tg[v1].tensor *= t
     end
-
-    # we will use v1 as the new result vertex
+    tg[v1].tensor *= tg[v2].tensor
     tg[v1].type = Composite
-    tg[v1].tensor = T
 
     # get list of vertices which are contracted with v2, not including v1
     nbs2 = setdiff(collect(neighbor_labels(tg, v2)), [v1])
@@ -307,11 +314,26 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     nothing
 end
 
-function contractcaps!(tg::MetaGraph)
+function contractcaps!(tg::MetaGraph, displayintermediateresults::Bool=false)
     caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
     for cap in caps 
         v = collect(neighbor_labels(tg, cap))[1]
-        contractedge!(tg, cap, v)
+        contractedge!(tg, v, cap)
+        if displayintermediateresults
+            display(tgplot(tg))
+            readline()
+        end
+    end
+end
+
+function contractsequence!(tg::MetaGraph, sequence::Vector{Int}, displayintermediateresults::Bool=false)
+    while length(sequence) > 1
+        contractedge!(tg, sequence[1], sequence[2])
+        deleteat!(sequence, 2)
+        if displayintermediateresults && length(collect(labels(tg))) > 1
+            display(tgplot(tg))
+            readline()
+        end
     end
 end
 
@@ -324,10 +346,12 @@ function contractgraph!(tg::MetaGraph)
         e = collect(edge_labels(tg))[1]
         contractedge!(tg, e...)
     end
+end
 
-    # get tensor belonging to final vertex
-    z = collect(labels(tg))[1]
-    T = tg[z].tensor
+function contractionresult(tg::MetaGraph)
+    labs = collect(labels(tg))
+    if length(labs) != 1 throw(ErrorException("Tensor Graph has not been fully contracted")) end
+    T = tg[labs[1]].tensor
 end
 
 ###############################################################################
@@ -406,7 +430,18 @@ function tensor2states(T::ITensor)
     states = Dict(s=>(pind2pval(Tuple(s)), Tarr[s]) for s in nzidxs)
 end
 
-function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}, vlabels=true)
+function normalizestates!(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
+    magnitude = 0
+    for (idx, (pvals, amp)) in states
+        magnitude += amp
+    end
+
+    for (idx, (pvals, amp)) in states
+        states[idx] = (pvals, amp/magnitude)
+    end
+end
+
+function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}, vlabels::Bool=true)
     qgs = []
     for (idx, (pvals, amp)) in states
         fillfrompvals(qg, pvals)
