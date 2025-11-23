@@ -175,7 +175,7 @@ end
 
 @enum TensorType begin
     # misc
-    StringTripletVector
+    StringTripletVector   
     StringTripletReflector
     Composite
 

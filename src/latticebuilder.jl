@@ -10,10 +10,9 @@ using Printf
 
 using Graphs
 using MetaGraphsNext
-using GraphRecipes, Plots
+using GLMakie, GraphMakie
 
 using ITensors
-using ITensorUnicodePlots
 
 ###############################################################################
 # GS LATTICE CONSTRUCTION
@@ -320,7 +319,8 @@ function contractcaps!(tg::MetaGraph, displayintermediateresults::Bool=false)
         v = collect(neighbor_labels(tg, cap))[1]
         contractedge!(tg, v, cap)
         if displayintermediateresults
-            display(tgplot(tg))
+            f, ax, p = tgplot(tg)
+            f
             readline()
         end
     end
@@ -331,7 +331,8 @@ function contractsequence!(tg::MetaGraph, sequence::Vector{Int}, displayintermed
         contractedge!(tg, sequence[1], sequence[2])
         deleteat!(sequence, 2)
         if displayintermediateresults && length(collect(labels(tg))) > 1
-            display(tgplot(tg))
+            f, ax, p = tgplot(tg)
+            f
             readline()
         end
     end
@@ -352,67 +353,6 @@ function contractionresult(tg::MetaGraph)
     labs = collect(labels(tg))
     if length(labs) != 1 throw(ErrorException("Tensor Graph has not been fully contracted")) end
     T = tg[labs[1]].tensor
-end
-
-###############################################################################
-# PLOTTING
-###############################################################################
-
-type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
-idxset2label = s -> join([get_idtag(i) for i in s], ';')
-commonargs = Dict(:curves=>false,
-                  :fontsize=>4,
-                  :fillcolor=>:lightgray,
-                  :nodesize=>0.3,
-                 )
- 
-function rsgplot(rsg::MetaGraph)
-    # graphplot uses Graphs.jl codes, so provide vertex properties in vertex code ordered list
-    # and provide edge properties as a dict of of (code1, code2) => edgeprop
-    labelstrings = map(string, labels(rsg))
-    separateargs = Dict(:title=>"Rotation System Graph (rsg)",
-                        :names=>collect(labelstrings),
-                        :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgecolor=>Dict(code_for.((rsg,),e) => e ∈ rsg[] || reverse(e) ∈ rsg[] ? :red : :black for e in edge_labels(rsg)),
-                        :nodeshape=>collect(map(type2shape, [rsg[l].type for l in labels(rsg)])),
-                       )
-    rsg_plot = GraphRecipes.graphplot(rsg; commonargs..., separateargs...)
-end
-
-function igplot(ig::MetaGraph)
-    labelstrings = map(string, labels(ig))
-    separateargs = Dict(:title=>"Index Graph (ig)",
-                        :names=>collect(labelstrings),
-                        :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgelabel=>Dict(code_for.((ig,),e) => idxset2label(ig[e...]) for e in edge_labels(ig)),
-                        :nodeshape=>collect(map(type2shape, [ig[l].type for l in labels(ig)])),
-                       )
-    ig_plot = GraphRecipes.graphplot(ig; commonargs..., separateargs...)
-end
-
-function qgplot(qg::MetaGraph, vlabels=true)
-    labelstrings = map(string, labels(qg))
-    separateargs = Dict(:title=>"Qubit Graph (qg)",
-                        :edgecolor=>Dict(code_for.((qg,),e) => qg[e...] ? :red : :black for e in edge_labels(qg)),
-                       )
-    if vlabels
-        separateargs[:names] = collect(labelstrings)
-        separateargs[:node_weights] = [1/length(l) for l in labelstrings]
-    end
-    qg_plot = GraphRecipes.graphplot(qg; commonargs..., separateargs...)
-end
-
-function tgplot(tg::MetaGraph)
-    tensorset2label = ts -> join([idxset2label(inds(t)) for t in ts], " ")
-
-    labelstrings = map(string, labels(tg))
-    separateargs = Dict(:title=>"Tensor Graph (tg)",
-                        :names=>collect(labelstrings),
-                        :node_weights=>[1/length(l) for l in labelstrings],
-                        :edgelabel=>Dict(code_for.((tg,),e) => tensorset2label(tg[e...]) for e in edge_labels(tg)),
-                        :nodeshape=>collect(map(type2shape, [tg[l].type for l in labels(tg)])),
-                       )
-    tg_plot = GraphRecipes.graphplot(tg; commonargs..., separateargs...)
 end
 
 function tensor2states(T::ITensor)
@@ -441,14 +381,3 @@ function normalizestates!(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index,
     end
 end
 
-function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}, vlabels::Bool=true)
-    qgs = []
-    for (idx, (pvals, amp)) in states
-        fillfrompvals(qg, pvals)
-        qg_plot = qgplot(qg, vlabels)
-        qg_plot.subplots[1].attr[:title] = "$(@sprintf("%.2f", amp))"
-        qg_plot.subplots[1].attr[:titlefontsize] = 4
-        push!(qgs, qg_plot)
-    end
-    plot(qgs...)
-end
