@@ -6,11 +6,8 @@
 #
 =#
 
-using Printf
-
 using Graphs
 using MetaGraphsNext
-using GLMakie, GraphMakie
 
 using ITensors
 
@@ -213,7 +210,7 @@ function ig2qg(ig::MetaGraph)
     qg = MetaGraph(
         Graph()::SimpleGraph;
         label_type=Int,
-        vertex_data_type=Nothing,
+        vertex_data_type=Bool,
         edge_data_type=Bool,
         graph_data=ig
     )
@@ -221,7 +218,7 @@ function ig2qg(ig::MetaGraph)
     # copy vertices which border edges with qubits
     for v in labels(ig)
         if length(ig[v].pinds) > 0
-            qg[v] = nothing
+            qg[v] = false
         end
     end
 
@@ -239,6 +236,12 @@ function fillfrompvals(qg::MetaGraph, pvals::Dict{<:Index, Int})
     ig = qg[]
     rsg = ig[]
 
+    # reset vertices; edges don't need to be reset because they
+    # get set later individually
+    for v in labels(qg)
+        qg[v] = false
+    end
+
     for e in edge_labels(qg)
         # get index of edge in ecycle
         v1, v2 = e[1], e[2]
@@ -250,6 +253,13 @@ function fillfrompvals(qg::MetaGraph, pvals::Dict{<:Index, Int})
 
         # set qubit value on edge
         qg[e...] = ijk[v2idx] == FibonacciAnyon(:τ)
+
+        # set vertex values adjacent to edge if it is on; we don't
+        # set it to false if qg[e...] is false because a different
+        # edge connected to this vertex might be true
+        if qg[e...]
+             qg[v1] = qg[v2] = true
+        end
     end
 end
 
@@ -313,28 +323,18 @@ function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     nothing
 end
 
-function contractcaps!(tg::MetaGraph, displayintermediateresults::Bool=false)
+function contractcaps!(tg::MetaGraph)
     caps = [l for l in labels(tg) if degree(tg, code_for(tg, l)) == 1]
     for cap in caps 
         v = collect(neighbor_labels(tg, cap))[1]
         contractedge!(tg, v, cap)
-        if displayintermediateresults
-            f, ax, p = tgplot(tg)
-            display(f)
-            readline()
-        end
     end
 end
 
-function contractsequence!(tg::MetaGraph, sequence::Vector{Int}, displayintermediateresults::Bool=false)
+function contractsequence!(tg::MetaGraph, sequence::Vector{Int})
     while length(sequence) > 1
         contractedge!(tg, sequence[1], sequence[2])
         deleteat!(sequence, 2)
-        if displayintermediateresults && length(collect(labels(tg))) > 1
-            f, ax, p = tgplot(tg)
-            display(f)
-            readline()
-        end
     end
 end
 
@@ -380,4 +380,3 @@ function normalizestates!(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index,
         states[idx] = (pvals, amp/magnitude)
     end
 end
-
