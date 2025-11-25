@@ -1,75 +1,77 @@
-type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :rect : :circle
-type2color = t -> t == GSTriangle ? :black : t == StringTripletVector ? :blue : :circle
-idxset2label = s -> join([get_idtag(i) for i in s], ';')
+# function to generically plot a metagraph
+function metagraphplot!(ax, mg::MetaGraph;
+        nodelabelfunc=nothing, nodecolorfunc=nothing, nodeshapefunc=nothing,
+        edgelabelfunc=nothing, edgecolorfunc=nothing,
+        title=nothing, layout=Spring())
+    # we will provide node properties as lists of values, one per vertex code, and edge properties as a Dict of Edge => edgeprop
+    make_nodeprop_list = f -> map(f, labels(mg))
+    make_edgeprop_dict = f -> Dict(Edge(code_for.((mg,),e)) => f(e) for e in edge_labels(mg))
 
-commonargs = Dict(:force_straight_edges=>true,
-                  :nlabels_fontsize=>12,
-                  :nlabels_distance=>10,
-                  :node_size=>10,
-                 )
- 
-function rsgplot(rsg::MetaGraph; layout=Spring())
-    # graphplot uses Graphs.jl codes, so provide vertex properties in vertex code ordered list
-    # and provide edge properties as a dict of of (code1, code2) => edgeprop
-    labelstrings = map(string, labels(rsg))
-    separateargs = Dict(:nlabels=>collect(labelstrings),
-                        :edge_color=>Dict(Edge(code_for.((rsg,),e)) => e ∈ rsg[] || reverse(e) ∈ rsg[] ? :red : :black for e in edge_labels(rsg))
-                       )
-    f, ax, p = graphplot(rsg; commonargs..., separateargs..., layout=layout)
-    ax.title = "Rotation System Graph (rsg)"
+    # common properties
+    propsdict = Dict(:force_straight_edges=>true,
+                     :nlabels_distance=>10,
+                     :layout=>layout,
+                    )
+
+    # add other properties based on what was provided to the function
+    if nodelabelfunc != nothing push!(propsdict, :nlabels=>make_nodeprop_list(nodelabelfunc)) end
+    if edgelabelfunc != nothing push!(propsdict, :elabels=>make_edgeprop_dict(edgelabelfunc)) end
+    if nodecolorfunc != nothing push!(propsdict, :node_color=>make_nodeprop_list(nodecolorfunc)) end
+    if edgecolorfunc != nothing push!(propsdict, :edge_color=>make_edgeprop_dict(edgecolorfunc)) end
+
+    # plot
+    p = graphplot!(ax, mg; propsdict...)
     hidespines!(ax)
     hidedecorations!(ax)
-    f, ax, p
+    if title != nothing ax.title = title end
+    p
 end
 
-function igplot(ig::MetaGraph; layout::Any=Spring())
-    labelstrings = map(string, labels(ig))
-    separateargs = Dict(:nlabels=>collect(labelstrings),
-                        :elabels=>Dict(Edge(code_for.((ig,),e)) => idxset2label(ig[e...]) for e in edge_labels(ig))
-                       )
-    f, ax, p = graphplot(ig; commonargs..., separateargs..., layout=layout)
-    ax.title = "Index Graph (ig)"
-    hidespines!(ax)
-    hidedecorations!(ax)
-    f, ax, p
-end
+# define some convenient functions to generate display strings from iterators of indices and tensors respectively
+indexiter2label = ii -> join([get_idtag(i) for i in ii], ';')
+tensoriter2label = ti -> join([indexiter2label(inds(t)) for t in ti], " ")
 
-function qgplot(qg::MetaGraph; vlabels=true, layout::Any=Spring())
-    labelstrings = map(string, labels(qg))
-    separateargs = Dict{Any, Any}(:edge_color=>Dict(Edge(code_for.((qg,),e)) => qg[e...] ? :red : :black for e in edge_labels(qg)),
-                       )
-    if vlabels
-        separateargs[:nlabels] = collect(labelstrings)
-    end
-    f, ax, p = graphplot(qg; commonargs..., separateargs..., layout=layout)
-    ax.title = "Qubit Graph (qg)"
-    hidespines!(ax)
-    hidedecorations!(ax)
-    f, ax, p
-end
+# define some convenience functions to determine node shapes and colors based on tensor type
+type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :star4 : :circle
+type2color = t -> t == GSTriangle ? :black : t == StringTripletVector ? :gray : :blue
 
-function tgplot(tg::MetaGraph; layout::Any=Spring())
-    tensorset2label = ts -> join([idxset2label(inds(t)) for t in ts], " ")
+# use Julia's closures to make partially filled functions for specialized plotting
+rsgplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
+                                                      nodelabelfunc=string,
+                                                      edgecolorfunc=e -> e ∈ mg[] || reverse(e) ∈ mg[] ? :red : :black,
+                                                      args...
+                                                     )
 
-    labelstrings = map(string, labels(tg))
-    separateargs = Dict(:nlabels=>collect(labelstrings),
-                        :elabels=>Dict(Edge(code_for.((tg,),e)) => tensorset2label(tg[e...]) for e in edge_labels(tg)),
-                       )
-    f, ax, p = graphplot(tg; commonargs..., separateargs..., layout=layout)
-    ax.title = "Tensor Graph (tg)"
-    hidespines!(ax)
-    hidedecorations!(ax)
-    f, ax, p
-end
+igplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
+                                                     nodelabelfunc=string,
+                                                     edgelabelfunc=e -> indexiter2label(ig[e...]),
+                                                     nodeshapefunc=n -> type2shape(mg[n].type),
+                                                     nodecolorfunc=n -> type2color(mg[n].type),
+                                                     args...
+                                                    )
 
+qgplot!(ax, mg::MetaGraph; vlabels=true, args...) = metagraphplot!(ax, mg;
+                                                                   nodelabelfunc=vlabels ? string : nothing,
+                                                                   edgecolorfunc=e -> mg[e...] ? :red : :black,
+                                                                   args...
+                                                                  )
+
+tgplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
+                                                     nodelabelfunc=string,
+                                                     edgelabelfunc=e -> tensoriter2label(tg[e...]),
+                                                     nodeshapefunc=n -> type2shape(mg[n].type),
+                                                     nodecolorfunc=n -> type2color(mg[n].type),
+                                                     args...
+                                                    )
+
+# convenience function to plot all results of a computation
 function statesplot(qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring())
     qgs = []
     for (idx, (pvals, amp)) in states
         fillfrompvals(qg, pvals)
-        qg_plot = qgplot(qg, vlabels)
-        qg_plot.subplots[1].attr[:title] = "$(@sprintf("%.2f", amp))"
-        qg_plot.subplots[1].attr[:titlefontsize] = 4
-        push!(qgs, qg_plot)
+        f, ax, p = qgplot(qg, vlabels=vlabels, layout=layout)
+        ax.title = "$(@sprintf("%.2f", amp))"
+        push!(qgs, p)
     end
     plot(qgs...)
 end

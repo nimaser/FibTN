@@ -320,7 +320,7 @@ function contractcaps!(tg::MetaGraph, displayintermediateresults::Bool=false)
         contractedge!(tg, v, cap)
         if displayintermediateresults
             f, ax, p = tgplot(tg)
-            f
+            display(f)
             readline()
         end
     end
@@ -332,7 +332,7 @@ function contractsequence!(tg::MetaGraph, sequence::Vector{Int}, displayintermed
         deleteat!(sequence, 2)
         if displayintermediateresults && length(collect(labels(tg))) > 1
             f, ax, p = tgplot(tg)
-            f
+            display(f)
             readline()
         end
     end
