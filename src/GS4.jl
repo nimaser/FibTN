@@ -28,6 +28,11 @@ ig = rsg2ig(rsg)
 qg = ig2qg(ig)
 tg = ig2tg(ig)
 
+addqdim!(tg, 1, 2)
+addqdim!(tg, 4, 5)
+addqdim!(tg, 5, 6)
+addqdim!(tg, 6, 3)
+
 for (k, v) in pindict
     pindict[k] = scale .* v .+ offset
 end
@@ -39,7 +44,7 @@ p = tgplot!(axs[1], tg, layout=l, nlabeloffsetscale=nlabeloffsetscale*scale)
 finalize(f, axs)
 display(f)
 
-contractcaps!(tg) # this line is unnecessary because there are no caps in this case
+contractcaps!(tg)
 contractsequence!(tg, contractionsequence)
 T = contractionresult(tg)
 s = tensor2states(T)

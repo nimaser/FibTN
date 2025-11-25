@@ -290,6 +290,34 @@ function ig2tg(ig::MetaGraph)
     tg
 end
 
+function addqdim!(tg::MetaGraph, v1::Int, v2::Int)
+    ig = tg[]
+    rsg = ig[]
+    
+    # v goes first, last in the order that the vertices were created
+    if rsg[v1].ecycle[1] == v2 v = (v2, v1)
+    elseif rsg[v1].ecycle[3] == v2 v = (v1, v2)
+    elseif rsg[v2].ecycle[1] == v1 v = (v1, v2)
+    elseif rsg[v2].ecycle[3] == v1 v = (v2, v1)
+    else v = (v1, v2) # in the case where we can't tell, we assume the user knows what they're doing
+    end # this assumption will be fixed in the next version, when we use a directed graph
+    # so v defines which face is the inside one
+    v1, v2 = v[1], v[2]
+    
+    # get index of edge in ecycle, and thus virtual index on that edge
+    v1idx = findfirst(x->x==v1, rsg[v2].ecycle)
+    vind = ig[v2].vinds[v1idx]
+
+    # first prime the reflection tensor, then contract it with the double primed qdim tensor, using 
+    # the delta to keep an extra index to later contract with the GSVertex tensor
+    RT = collect(tg[v1, v2])[1]
+    prime!(RT)
+    NRT = ITensors.δ(vind, vind', vind'') * RT * make_GSLoopAmplitude(Index[vind''])
+    # unprime the indices of the new reflection tensor, then put it back into the edge
+    noprime!(NRT)
+    tg[v1, v2] = Set([NRT])
+end
+
 function contractedge!(tg::MetaGraph, v1::Int, v2::Int)
     # check that an edge actually exists between v1 and v2
     if !haskey(tg, v1, v2) throw(ErrorException("no edge between vertices $v1 and $v2")) end

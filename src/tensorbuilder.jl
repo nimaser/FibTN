@@ -91,6 +91,19 @@ function make_StringTripletVector(vinds::Vector{Index}, a::Int)
     onehot(vinds[1]=>a)
 end
 
+function make_GSLoopAmplitude(vinds::Vector{Index})
+    if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
+    if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
+    arr = zeros(Float64, 5)
+    # this only affects one plaquette adjacent to the edge it is placed on, not two 
+    arr[1] = qdim(FibonacciAnyon(:I))
+    arr[2] = qdim(FibonacciAnyon(:I))
+    arr[3] = qdim(FibonacciAnyon(:τ))
+    arr[4] = qdim(FibonacciAnyon(:τ))
+    arr[5] = qdim(FibonacciAnyon(:τ))
+    ITensor(arr, vinds...)
+end
+
 function make_StringTripletReflector(vinds::Vector{Index})
     if length(vinds) != 2 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
     for vind in vinds
@@ -115,7 +128,7 @@ function GSTriangle_data()
             for c in 1:5
                 local i, j, k, λ, μ, ν, p
                 try i, j, k, λ, μ, ν, p = abc2etc(a, b, c) catch; continue end
-                GSTriangle_data[a, b, c, p] = (qdim(λ)*qdim(μ)*qdim(ν))^(1/6) * Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
+                GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k)) #(qdim(λ)*qdim(μ)*qdim(ν))^(1/6) * 
             end
         end
     end

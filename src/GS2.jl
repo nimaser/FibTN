@@ -24,6 +24,9 @@ ig = rsg2ig(rsg)
 qg = ig2qg(ig)
 tg = ig2tg(ig)
 
+addqdim!(tg, 1, 2)
+addqdim!(tg, 3, 4)
+
 for (k, v) in pindict
     pindict[k] = scale .* v .+ offset
 end

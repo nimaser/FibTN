@@ -106,7 +106,7 @@ function statesplot!(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{
     plots = []
     for (ax, (idx, (pvals, amp))) in zip(axs, states)
         fillfrompvals(qg, pvals)
-        p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.2f", amp))", args...)
+        p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(Tuple(idx)) $(@sprintf("%.4f", amp))", args...)
         push!(plots, p)
     end
     plots

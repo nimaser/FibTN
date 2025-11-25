@@ -6,14 +6,15 @@ include("latticevisualizer.jl")
 
 rsg = new_plaquette(6)
 
-contractionsequence = [1, 2, 3, 4, 5, 6]
+contractionsequence = collect(1:6)
 
 pindict = Dict(1=>(-sqrt(3), -1),
                2=>(-sqrt(3), 1),
                3=>(0, 2),
                4=>(sqrt(3), 1),
                5=>(sqrt(3), -1),
-               6=>(0, -2))
+               6=>(0, -2)
+              )
 offset = (0, 0)
 scale = 1
 nlabeloffsetscale = 0.15
@@ -24,6 +25,8 @@ cap_all!(rsg)
 ig = rsg2ig(rsg)
 qg = ig2qg(ig)
 tg = ig2tg(ig)
+
+addqdim!(tg, 2, 1) 
 
 for (k, v) in pindict
     pindict[k] = scale .* v .+ offset
