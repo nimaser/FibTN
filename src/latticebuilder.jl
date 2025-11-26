@@ -401,10 +401,11 @@ end
 function normalizestates!(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
     magnitude = 0
     for (idx, (pvals, amp)) in states
-        magnitude += amp
+        magnitude += amp^2
     end
 
-    for (idx, (pvals, amp)) in states
-        states[idx] = (pvals, amp/magnitude)
-    end
+    sqrt(magnitude)
+    #for (idx, (pvals, amp)) in states
+    #    states[idx] = (pvals, amp/magnitude)
+    #end
 end

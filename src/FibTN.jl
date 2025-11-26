@@ -1,6 +1,10 @@
 module FibTN
 
-include("tensorbuilder.jl")
-include("latticebuilder.jl")
 
 end # module FibTN
+
+using .FibTN
+
+include("tensorbuilder.jl")
+include("latticebuilder.jl")
+include("latticevisualizer.jl")
