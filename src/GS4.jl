@@ -1,23 +1,18 @@
 # this script must define rsg, contractionsequences, pindict, offset, scale, and
 # nlabeloffsetscale before calculateGS.jl is run
 rsg = new_plaquette(4)
-add_plaquette!(rsg, 4, 1, 3)
-add_plaquette!(rsg, 5, 2, 4)
-add_plaquette!(rsg, 6, 3, 3)
+add_plaquette!(rsg, 4, 1, 4)
+add_plaquette!(rsg, 6, 2, 4)
 
-contractionsequences = [[1, 4, 5, 2, 3, 6]]
+contractionsequences = [[2, 3, 4, 5, 6, 7, 1]]
 
-pindict = Dict(1=>(-1, 0),
-               2=>(1, 0),
-               3=>(2, 1),
-               4=>(-2, 1),
-               5=>(-2, -1),
-               6=>(2, -1))
-offset = (0, -1)
+pindict = Dict(1=>(0, 0),
+               2=>(0, 1),
+               3=>(1, 1),
+               4=>(1, 0),
+               5=>(1, -1),
+               6=>(0, -1),
+               7=>(-1, 0))
+offset = (-1, -1)
 scale = 2
-nlabeloffsetscale = 0.3
-
-addqdim!(tg, 1, 2)
-addqdim!(tg, 4, 5)
-addqdim!(tg, 5, 6)
-addqdim!(tg, 6, 3)
+nlabeloffsetscale = 0.15

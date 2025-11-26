@@ -12,6 +12,3 @@ pindict = Dict(1=>(-1, -1),
 offset = (1, -1)
 scale = 2
 nlabeloffsetscale = 0.15
-
-addqdim!(tg, 1, 2)
-addqdim!(tg, 3, 4)

@@ -30,7 +30,7 @@ function new_plaquette(order::Int)
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=rsgVertexData,
-        edge_data_type=Nothing,
+        edge_data_type=Union{Nothing, Tuple{Int, Int}}, # edges store tuple of vertices if they need a quantum dim
         graph_data=rsgBoundaryEdgeSet()
     )
 
@@ -48,6 +48,9 @@ function new_plaquette(order::Int)
     end
     rsg[order, 1] = nothing
     push!(rsg[], (order, 1))
+
+    # set first edge to contain qdim
+    rsg[1, 2] = (1, 2)
 
     rsg
 end
@@ -100,7 +103,7 @@ function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
 
     # if only one edge needs to be added, add it to graph and boundary set, modify edge cycles, and dip
     if edgestomake == 1
-        rsg[v1, v2] = nothing
+        rsg[v1, v2] = (v1, v2) # add qdim
         push!(rsg[], (v1, v2))
         insert!(rsg[v1].ecycle, 2, v2)
         insert!(rsg[v2].ecycle, 2, v1)
@@ -124,7 +127,7 @@ function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
     insert!(rsg[v2].ecycle, 2, startindex+edgestomake-2)
 
     # add new edges and add them to the boundary
-    rsg[v1, startindex] = nothing
+    rsg[v1, startindex] = (v1, startindex) # this one gets qdim
     push!(rsg[], (v1, startindex))
     for i in startindex:startindex+edgestomake-3
         rsg[i, i + 1] = nothing
@@ -287,22 +290,19 @@ function ig2tg(ig::MetaGraph)
         tg[e...] = Set([make_tensor(StringTripletReflector, ig[e...], Index[])])
     end
 
+    # modify all qdim edges
+    rsg = ig[]
+    for e in edge_labels(rsg)
+        if rsg[e...] != nothing add_qdim!(tg, rsg[e...]...) end
+    end
+
     tg
 end
 
-function addqdim!(tg::MetaGraph, v1::Int, v2::Int)
+function add_qdim!(tg::MetaGraph, v1::Int, v2::Int)
+    @show v1, v2
     ig = tg[]
     rsg = ig[]
-    
-    # v goes first, last in the order that the vertices were created
-    if rsg[v1].ecycle[1] == v2 v = (v2, v1)
-    elseif rsg[v1].ecycle[3] == v2 v = (v1, v2)
-    elseif rsg[v2].ecycle[1] == v1 v = (v1, v2)
-    elseif rsg[v2].ecycle[3] == v1 v = (v2, v1)
-    else v = (v1, v2) # in the case where we can't tell, we assume the user knows what they're doing
-    end # this assumption will be fixed in the next version, when we use a directed graph
-    # so v defines which face is the inside one
-    v1, v2 = v[1], v[2]
     
     # get index of edge in ecycle, and thus virtual index on that edge
     v1idx = findfirst(x->x==v1, rsg[v2].ecycle)
