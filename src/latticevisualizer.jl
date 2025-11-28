@@ -109,6 +109,32 @@ function statesplot!(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{
         #p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(Tuple(idx)) $(@sprintf("%.4f", amp))", args...)
         p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
         push!(plots, p)
+        # remove the default interactions from this axis
+        for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax, i) end
+        # add the popout window interaction to this axis
+        if :popout_axis ∉ keys(ax.interactions)
+            register_interaction!(ax, :popout_axis) do event::MouseEvent, ax
+                if event.type === MouseEventTypes.leftclick
+                    f_popout = Figure()
+                    ax_popout = Axis(f_popout[1, 1]; aspect = DataAspect())
+                    for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax_popout, i) end
+                    fillfrompvals(qg, pvals)
+                    p_popout = qgplot!(ax_popout, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
+                    finalize(f_popout, [ax_popout])
+                    GLFW_win = GLMakie.to_native(display(GLMakie.Screen(), f_popout))
+                    # make window easily closeable via keyboard
+                    register_interaction!(ax_popout, :close_window_with_q) do event::KeysEvent, ax
+                        if Keyboard.q ∈ event.keys
+                            GLMakie.GLFW.SetWindowShouldClose(GLFW_win, true)
+                        end
+                    end
+                end
+            end
+        end
     end
+    #add_close_window_with_q_interaction!(axs[1])
+    # add normalization to figure title
+    N = get_normalization(s)
+    axs[1].parent[0, :] = Label(axs[1].parent, "N = $(@sprintf("%.3f", N))")
     plots
 end

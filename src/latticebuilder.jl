@@ -403,14 +403,10 @@ function tensor2states(T::ITensor)
     states = Dict(s=>(pind2pval(Tuple(s)), Tarr[s]) for s in nzidxs)
 end
 
-function normalizestates!(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
+function get_normalization(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
     magnitude = 0
     for (idx, (pvals, amp)) in states
         magnitude += amp^2
     end
-
-    sqrt(magnitude)
-    #for (idx, (pvals, amp)) in states
-    #    states[idx] = (pvals, amp/magnitude)
-    #end
+    N = sqrt(magnitude)
 end
