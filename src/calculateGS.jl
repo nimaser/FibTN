@@ -18,7 +18,7 @@ l = NetworkLayout.Spring(pin=pindict)
 # display the tg before contraction
 f = Figure()
 _, _, axs = getaxisgrid(f, 1)
-p = tgplot!(axs[1], tg, layout=l)
+p = tgplot(axs[1], tg, layout=l)
 finalize(f, axs)
 display(f)
 
@@ -33,6 +33,6 @@ s = tensor2states(T)
 # display the result of contracting the tg
 f = Figure()
 w, h, axs = getaxisgrid(f, length(s))
-plots = statesplot!(axs, qg, s, layout=l)
+plots = statesplot(axs, qg, s, layout=l)
 finalize(f, axs)
 display(f)

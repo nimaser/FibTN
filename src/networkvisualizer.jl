@@ -3,7 +3,7 @@ using Printf
 using NetworkLayout
 
 # function to generically plot a metagraph
-function metagraphplot!(ax, mg::MetaGraph;
+function metagraphplot(ax, mg::MetaGraph;
         nodelabelfunc=nothing, nodecolorfunc=nothing, nodeshapefunc=nothing,
         edgelabelfunc=nothing, edgecolorfunc=nothing, edgewidthfunc=nothing,
         title=nothing, layout=Spring(), nlabeloffsetscale=0.15)
@@ -48,34 +48,34 @@ type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :star4
 type2color = t -> t == GSTriangle ? :black : t == StringTripletVector ? :gray : :blue
 
 # use Julia's closures to make partially filled functions for specialized plotting
-rsgplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
-                                                      nodelabelfunc=string,
-                                                      edgecolorfunc=e -> e ∈ mg[] || reverse(e) ∈ mg[] ? :red : :black,
-                                                      args...
-                                                     )
+rsgplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
+                                                    nodelabelfunc=string,
+                                                    edgecolorfunc=e -> e ∈ mg[] || reverse(e) ∈ mg[] ? :red : :black,
+                                                    args...
+                                                   )
 
-igplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
-                                                     nodelabelfunc=string,
-                                                     edgelabelfunc=e -> indexiter2label(ig[e...]),
-                                                     nodeshapefunc=n -> type2shape(mg[n].type),
-                                                     nodecolorfunc=n -> type2color(mg[n].type),
-                                                     args...
-                                                    )
+igplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
+                                                   nodelabelfunc=string,
+                                                   edgelabelfunc=e -> indexiter2label(ig[e...]),
+                                                   nodeshapefunc=n -> type2shape(mg[n].type),
+                                                   nodecolorfunc=n -> type2color(mg[n].type),
+                                                   args...
+                                                  )
 
-tgplot!(ax, mg::MetaGraph; args...) = metagraphplot!(ax, mg;
-                                                     nodelabelfunc=string,
-                                                     edgelabelfunc=e -> tensoriter2label(tg[e...]),
-                                                     nodeshapefunc=n -> type2shape(mg[n].type),
-                                                     nodecolorfunc=n -> type2color(mg[n].type),
-                                                     args...
-                                                    )
+tgplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
+                                                   nodelabelfunc=string,
+                                                   edgelabelfunc=e -> tensoriter2label(tg[e...]),
+                                                   nodeshapefunc=n -> type2shape(mg[n].type),
+                                                   nodecolorfunc=n -> type2color(mg[n].type),
+                                                   args...
+                                                  )
 
-qgplot!(ax, mg::MetaGraph; vlabels=true, args...) = metagraphplot!(ax, mg;
-                                                                   nodelabelfunc=vlabels ? string : nothing,
-                                                                   nodecolorfunc=n -> mg[n] ? :red : :black,
-                                                                   edgecolorfunc=e -> mg[e...] ? :red : :black,
-                                                                   args...
-                                                                  )
+qgplot(ax, mg::MetaGraph; vlabels=true, args...) = metagraphplot(ax, mg;
+                                                                 nodelabelfunc=vlabels ? string : nothing,
+                                                                 nodecolorfunc=n -> mg[n] ? :red : :black,
+                                                                 edgecolorfunc=e -> mg[e...] ? :red : :black,
+                                                                 args...
+                                                                )
 
 function calculategridsidelengths(area::Int)
     width = height = floor(sqrt(area))
@@ -102,12 +102,12 @@ function finalize(f, axs)
 end
 
 # convenience function to plot all results of a computation on a vector of axes
-function statesplot!(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring(), args...)
+function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring(), args...)
     plots = []
     for (ax, (idx, (pvals, amp))) in zip(axs, states)
         fillfrompvals(qg, pvals)
         #p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(Tuple(idx)) $(@sprintf("%.4f", amp))", args...)
-        p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
+        p = qgplot(ax, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
         push!(plots, p)
         # remove the default interactions from this axis
         for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax, i) end
@@ -119,7 +119,7 @@ function statesplot!(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{
                     ax_popout = Axis(f_popout[1, 1]; aspect = DataAspect())
                     for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax_popout, i) end
                     fillfrompvals(qg, pvals)
-                    p_popout = qgplot!(ax_popout, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
+                    p_popout = qgplot(ax_popout, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
                     finalize(f_popout, [ax_popout])
                     GLFW_win = GLMakie.to_native(display(GLMakie.Screen(), f_popout))
                     # make window easily closeable via keyboard
