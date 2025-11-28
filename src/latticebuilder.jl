@@ -1,9 +1,5 @@
 #=
 # This module provides an API to build ground state lattices.
-#
-#
-#
-#
 =#
 
 using Graphs
@@ -19,6 +15,7 @@ using ITensors
 
 const rsgEdgeCycle = Vector{Int}
 const rsgVertexData = @NamedTuple{type::TensorType, ecycle::rsgEdgeCycle}
+const rsgEdgeData = @NamedTuple{vertices::Tuple{Int, Int}, amps::Union{Bool, Dict}}
 const rsgBoundaryEdgeSet = Set{Tuple{Int, Int}}
 
 function new_plaquette(order::Int)
@@ -30,7 +27,7 @@ function new_plaquette(order::Int)
         Graph()::SimpleGraph;
         label_type=Int,
         vertex_data_type=rsgVertexData,
-        edge_data_type=Union{Nothing, Tuple{Int, Int}}, # edges store tuple of vertices if they need a quantum dim
+        edge_data_type=Union{Nothing, rsgEdgeData},
         graph_data=rsgBoundaryEdgeSet()
     )
 
@@ -50,7 +47,7 @@ function new_plaquette(order::Int)
     push!(rsg[], (order, 1))
 
     # set first edge to contain qdim
-    rsg[1, 2] = (1, 2)
+    rsg[1, 2] = rsgEdgeData(((1, 2), Dict(a=>qdim(a) for a in map(FibonacciAnyon, [:I, :τ])))) # add vacuum loop amplitude
 
     rsg
 end
@@ -103,7 +100,7 @@ function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
 
     # if only one edge needs to be added, add it to graph and boundary set, modify edge cycles, and dip
     if edgestomake == 1
-        rsg[v1, v2] = (v1, v2) # add qdim
+        rsg[v1, v2] = rsgEdgeData(((v1, v2), Dict(a=>qdim(a) for a in map(FibonacciAnyon, [:I, :τ])))) # add vacuum loop amplitude
         push!(rsg[], (v1, v2))
         insert!(rsg[v1].ecycle, 2, v2)
         insert!(rsg[v2].ecycle, 2, v1)
@@ -127,7 +124,7 @@ function add_plaquette!(rsg::MetaGraph, v1::Int, v2::Int, order::Int)
     insert!(rsg[v2].ecycle, 2, startindex+edgestomake-2)
 
     # add new edges and add them to the boundary
-    rsg[v1, startindex] = (v1, startindex) # this one gets qdim
+    rsg[v1, startindex] = rsgEdgeData(((v1, startindex), Dict(a=>qdim(a) for a in map(FibonacciAnyon, [:I, :τ])))) # add vacuum loop amplitude
     push!(rsg[], (v1, startindex))
     for i in startindex:startindex+edgestomake-3
         rsg[i, i + 1] = nothing
@@ -162,6 +159,16 @@ function cap_all!(rsg::MetaGraph)
     end
 end
 
+function make_boundary_trivial!(rsg::MetaGraph)
+    for e in rsg[]
+        if rsg[e...] == nothing
+            rsg[e...] = rsgEdgeData(((e[2], e[1]), Dict(a=>a == FibonacciAnyon(:I) ? 1 : 0 for a in map(FibonacciAnyon, [:I, :τ]))))
+            return
+        end
+    end
+    throw(ErrorException("no boundary edges left to put a trivial loop on"))
+end
+
 ### INDEX GRAPH ###
 
 const igVertexData = @NamedTuple{type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}}
@@ -185,7 +192,6 @@ function rsg2ig(rsg::MetaGraph)
         # create indices for v
         vinds, pinds = make_tensor_indices(v, rsg[v].type)
         ig[v] = igVertexData((rsg[v].type, vinds, pinds))
-        
 
         # copy edges attached to v and create index sets if they haven't already been made
         for endpoint in rsg[v].ecycle
@@ -293,14 +299,13 @@ function ig2tg(ig::MetaGraph)
     # modify all qdim edges
     rsg = ig[]
     for e in edge_labels(rsg)
-        if rsg[e...] != nothing add_qdim!(tg, rsg[e...]...) end
+        if rsg[e...] != nothing add_loop_superposition!(tg, rsg[e...].vertices..., rsg[e...].amps) end
     end
 
     tg
 end
 
-function add_qdim!(tg::MetaGraph, v1::Int, v2::Int)
-    @show v1, v2
+function add_loop_superposition!(tg::MetaGraph, v1::Int, v2::Int, amps)
     ig = tg[]
     rsg = ig[]
     
@@ -312,7 +317,7 @@ function add_qdim!(tg::MetaGraph, v1::Int, v2::Int)
     # the delta to keep an extra index to later contract with the GSVertex tensor
     RT = collect(tg[v1, v2])[1]
     prime!(RT)
-    NRT = ITensors.δ(vind, vind', vind'') * RT * make_GSLoopAmplitude(Index[vind''])
+    NRT = ITensors.δ(vind, vind', vind'') * RT * make_LoopAmplitude(Index[vind''], amps)
     # unprime the indices of the new reflection tensor, then put it back into the edge
     noprime!(NRT)
     tg[v1, v2] = Set([NRT])

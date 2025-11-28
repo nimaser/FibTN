@@ -91,16 +91,20 @@ function make_StringTripletVector(vinds::Vector{Index}, a::Int)
     onehot(vinds[1]=>a)
 end
 
-function make_GSLoopAmplitude(vinds::Vector{Index})
+function make_VacuumLoopAmplitude(vinds::Vector{Index})
+    make_LoopAmplitude(vinds, Dict(a=>qdim(a) for a in map(FibonacciAnyon, [:I, :τ])))
+end
+
+function make_LoopAmplitude(vinds::Vector{Index}, amps::Dict)
     if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
     if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
     arr = zeros(Float64, 5)
     # this only affects one plaquette adjacent to the edge it is placed on, not two 
-    arr[1] = qdim(FibonacciAnyon(:I))
-    arr[2] = qdim(FibonacciAnyon(:I))
-    arr[3] = qdim(FibonacciAnyon(:τ))
-    arr[4] = qdim(FibonacciAnyon(:τ))
-    arr[5] = qdim(FibonacciAnyon(:τ))
+    arr[1] = amps[FibonacciAnyon(:I)]
+    arr[2] = amps[FibonacciAnyon(:I)]
+    arr[3] = amps[FibonacciAnyon(:τ)]
+    arr[4] = amps[FibonacciAnyon(:τ)]
+    arr[5] = amps[FibonacciAnyon(:τ)]
     ITensor(arr, vinds...)
 end
 

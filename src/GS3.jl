@@ -13,3 +13,5 @@ pindict = Dict(1=>(0, 0),
 offset = (1, 0)
 scale = 2
 nlabeloffsetscale = 0.15
+
+make_boundary_trivial!(rsg)
