@@ -33,6 +33,6 @@ s = tensor2states(T)
 # display the result of contracting the tg
 f = Figure()
 w, h, axs = getaxisgrid(f, length(s))
-plots = statesplot(axs, qg, s, layout=l)
+plots = statesplot(axs, qg, s, vlabels=false, layout=l, popoutargs=Dict(:titlesize=>28))
 finalize(f, axs)
 display(f)

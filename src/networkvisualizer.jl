@@ -87,9 +87,9 @@ function calculategridsidelengths(area::Int)
     Int(width), Int(height)
 end
 
-function getaxisgrid(f, area::Int)
+function getaxisgrid(f, area::Int; args...)
     w, h = calculategridsidelengths(area)
-    axs = [Axis(f[r, c]; aspect = DataAspect()) for r in 1:h, c in 1:w]
+    axs = [Axis(f[r, c]; aspect = DataAspect(), args...) for r in 1:h, c in 1:w]
     w, h, axs
 end
 
@@ -101,13 +101,31 @@ function finalize(f, axs)
     resize_to_layout!(f)
 end
 
+function getrationalpower(x::Float64, b::Float64)
+    y = log(x) / log(b)
+    r = rationalize(Int16, y)
+    n, d = numerator(r), denominator(r)
+end
+
+function topowerofbasestr(x::Float64, b::Float64, bstr::String) 
+    isnegative = x < 0
+    x = isnegative ? -x : x
+    n, d = getrationalpower(x, b)
+    s = n == 0 ? "0" : d == 1 ? n : n == d ? "1" : "$n/$d"
+    s = "$(bstr)^{$s}"
+    s = isnegative ? L"-%$s" : L"%$s"
+end
+
+topowerofphistr(x::Float64) = topowerofbasestr(x, qdim(FibonacciAnyon(:τ)), "\\phi")
+topowerofDstr(x::Float64) = topowerofbasestr(x, sqrt(qdim(FibonacciAnyon(:I))^2 + qdim(FibonacciAnyon(:τ))^2), "D")
+
 # convenience function to plot all results of a computation on a vector of axes
-function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring(), args...)
+function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring(), popoutargs::Dict=nothing, args...)
     plots = []
     for (ax, (idx, (pvals, amp))) in zip(axs, states)
         fillfrompvals(qg, pvals)
         #p = qgplot!(ax, qg; vlabels=vlabels, layout=layout, title="$(Tuple(idx)) $(@sprintf("%.4f", amp))", args...)
-        p = qgplot(ax, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
+        p = qgplot(ax, qg; vlabels=vlabels, layout=layout, title=topowerofphistr(amp), args...)
         push!(plots, p)
         # remove the default interactions from this axis
         for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax, i) end
@@ -116,10 +134,10 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
             register_interaction!(ax, :popout_axis) do event::MouseEvent, ax
                 if event.type === MouseEventTypes.leftclick
                     f_popout = Figure()
-                    ax_popout = Axis(f_popout[1, 1]; aspect = DataAspect())
+                    ax_popout = Axis(f_popout[1, 1]; aspect = DataAspect(), popoutargs...)
                     for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax_popout, i) end
                     fillfrompvals(qg, pvals)
-                    p_popout = qgplot(ax_popout, qg; vlabels=vlabels, layout=layout, title="$(@sprintf("%.3f", amp))", args...)
+                    p_popout = qgplot(ax_popout, qg; vlabels=vlabels, layout=layout, title=topowerofphistr(amp), args...)
                     finalize(f_popout, [ax_popout])
                     GLFW_win = GLMakie.to_native(display(GLMakie.Screen(), f_popout))
                     # make window easily closeable via keyboard
@@ -135,6 +153,6 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
     #add_close_window_with_q_interaction!(axs[1])
     # add normalization to figure title
     N = get_normalization(s)
-    axs[1].parent[0, :] = Label(axs[1].parent, "N = $(@sprintf("%.3f", N))")
+    axs[1].parent[0, :] = Label(axs[1].parent, L"N = %$(topowerofDstr(N))", fontsize=24)
     plots
 end
