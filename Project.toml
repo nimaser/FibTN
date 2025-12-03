@@ -2,3 +2,21 @@ name = "FibTN"
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
 authors = ["nmaserang <nmaserang@berkeley.edu>"]
+
+[deps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
+Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
+ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
+MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
+NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
+TensorKitSectors = "13a9c161-d5da-41f0-bcbd-e1a08ae0647f"
+
+[compat]
+GLMakie = "0.13.7"
+GraphMakie = "0.6.3"
+Graphs = "1.13.2"
+ITensors = "0.9.15"
+MetaGraphsNext = "0.7.4"
+NetworkLayout = "0.4.10"
+TensorKitSectors = "0.3.3"
