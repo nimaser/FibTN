@@ -1,6 +1,4 @@
 using GLMakie, GraphMakie
-using Printf
-using NetworkLayout
 
 # function to generically plot a metagraph
 function metagraphplot(ax, mg::MetaGraph;
@@ -56,7 +54,7 @@ rsgplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
 
 igplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
                                                    nodelabelfunc=string,
-                                                   edgelabelfunc=e -> indexiter2label(ig[e...]),
+                                                   edgelabelfunc=e -> indexiter2label(mg[e...]),
                                                    nodeshapefunc=n -> type2shape(mg[n].type),
                                                    nodecolorfunc=n -> type2color(mg[n].type),
                                                    args...
@@ -64,7 +62,7 @@ igplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
 
 tgplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;
                                                    nodelabelfunc=string,
-                                                   edgelabelfunc=e -> tensoriter2label(tg[e...]),
+                                                   edgelabelfunc=e -> tensoriter2label(mg[e...]),
                                                    nodeshapefunc=n -> type2shape(mg[n].type),
                                                    nodecolorfunc=n -> type2color(mg[n].type),
                                                    args...
@@ -152,7 +150,7 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
     end
     #add_close_window_with_q_interaction!(axs[1])
     # add normalization to figure title
-    N = get_normalization(s)
+    N = get_normalization(states)
     axs[1].parent[0, :] = Label(axs[1].parent, L"N = %$(topowerofDstr(N))", fontsize=24)
     plots
 end

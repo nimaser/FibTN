@@ -1,23 +1,95 @@
 module FibTN
-
 end # module FibTN
+
+# define case and mode before running this script    
+
+using Printf
+using NetworkLayout
+using Serialization
 
 include("tensorbuilder.jl")
 include("networkbuilder.jl")
-include("networkvisualizer.jl")
+if mode == :V || mode == :D include("networkvisualizer.jl") end
 include("latticebuilder.jl")
 
-case = length(ARGS) > 0 ? ARGS[1] : throw(ErrorException("case number must be supplied as the first argument"))
-genTN = length(ARGS) > 1 && ARGS[2] == "1" ? true : false
-contractTN = length(ARGS) > 2 && ARGS[3] == "1" ? true : false
+mutable struct GSCalculation
+    rsg::MetaGraph
+    ig::MetaGraph
+    qg::MetaGraph
+    tg::Union{MetaGraph, Nothing}
+    contractionsequences::Vector
+    pindict::Dict
+    offset::Tuple
+    scale::Float64
+    nlabeloffsetscale::Float64
+    l::NetworkLayout.AbstractLayout
+    T::Union{ITensor, Nothing}
+    s::Dict
+end
 
-@show case, genTN, contractTN
+function displayig(gscalc)
+    f = Figure()
+    _, _, axs = getaxisgrid(f, 1)
+    p = igplot(axs[1], gscalc.ig, layout=gscalc.l)
+    finalize(f, axs)
+    display(GLMakie.Screen(), f)
+end
 
-include("GS$(case).jl")
-@show rsg
-if genTN
-    include("genTN.jl")
-    if contractTN
-        include("contractTN.jl")
+function displays(gscalc)
+    f = Figure()
+    w, h, axs = getaxisgrid(f, length(gscalc.s))
+    plots = statesplot(axs, gscalc.qg, gscalc.s, vlabels=false, layout=gscalc.l, popoutargs=Dict(:titlesize=>28))
+    finalize(f, axs)
+    display(GLMakie.Screen(), f)
+end
+
+if mode == :D
+    gscalc = deserialize(pwd() * "/out/case$(case)")
+
+    displayig(gscalc)
+    displays(gscalc)
+else
+    # get the rsg and display information
+    include("cases.jl")
+    f = getfield(Main, Symbol("case$(case)"))
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale = f()
+    
+    # generate the other graphs
+    ig = rsg2ig(rsg)
+    qg = ig2qg(ig)
+    tg = ig2tg(ig)
+    
+    # generate the networklayout to display the qg
+    for (k, v) in pindict
+        pindict[k] = scale .* v .+ offset
+    end
+    l = NetworkLayout.Spring(pin=pindict)
+    
+    # contract the tg
+    contractcaps!(tg)
+    for cs in contractionsequences
+        contractsequence!(tg, cs)
+    end
+    
+    # get the results
+    T = contractionresult(tg)
+    s = tensor2states(T)
+    
+    gscalc = GSCalculation(rsg, ig, qg, tg,
+                           contractionsequences,
+                           pindict, offset, scale, nlabeloffsetscale,
+                           l, T, s
+                          )
+
+    if mode == :S
+        # gotta discard the memory-intensive parts
+        gscalc.tg = nothing
+        gscalc.T = nothing
+        serialize(pwd() * "/out/case$(case)", gscalc)
+    end
+
+    if mode == :V
+        displayig(gscalc)
+        displays(gscalc)
     end
 end
