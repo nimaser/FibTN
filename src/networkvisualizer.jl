@@ -205,6 +205,7 @@ function displays(states::Dict, qg::MetaGraph, l::NetworkLayout.AbstractLayout)
     screen = GLMakie.Screen()
     f = Figure()
     w, h, axs = getaxisgrid(f, statesperpane)
+    for ax in axs ax.titlesize=24 end
     sds = make_subdicts(states, statesperpane)
 
     # set up slilders
