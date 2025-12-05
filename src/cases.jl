@@ -67,8 +67,8 @@ function case2()
 end
 
 function case2h()
-    len = 6
-    rsg, pindict = hex_lattice(len, 6)
+    len = 2
+    rsg, pindict = hex_lattice(len, 1)
     cap_all!(rsg)
     
     contractionsequences = []
@@ -221,6 +221,7 @@ function case9()
     scale = 2
     nlabeloffsetscale = 0.3
 
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
 
 function case9h()
