@@ -27,22 +27,6 @@ mutable struct GSCalculation
     s::Dict
 end
 
-function displayig(gscalc)
-    f = Figure()
-    _, _, axs = getaxisgrid(f, 1)
-    p = igplot(axs[1], gscalc.ig, layout=gscalc.l)
-    finalize(f, axs)
-    display(GLMakie.Screen(), f)
-end
-
-function displays(gscalc)
-    f = Figure()
-    w, h, axs = getaxisgrid(f, length(gscalc.s))
-    plots = statesplot(axs, gscalc.qg, gscalc.s, vlabels=false, layout=gscalc.l, popoutargs=Dict(:titlesize=>28))
-    finalize(f, axs)
-    display(GLMakie.Screen(), f)
-end
-
 if mode == :D
     gscalc = deserialize(pwd() * "/out/case$(case)")
 

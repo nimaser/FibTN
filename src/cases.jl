@@ -161,6 +161,8 @@ function case7()
     offset = (0, -1)
     scale = 2
     nlabeloffsetscale = 0.3
+
+    make_boundary_trivial!(rsg)
     
     rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end

@@ -101,7 +101,7 @@ end
 
 function getrationalpower(x::Float64, b::Float64)
     y = log(x) / log(b)
-    r = rationalize(Int16, y)
+    r = rationalize(Int8, y)
     n, d = numerator(r), denominator(r)
 end
 
@@ -126,14 +126,14 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
         p = qgplot(ax, qg; vlabels=vlabels, layout=layout, title=topowerofphistr(amp), args...)
         push!(plots, p)
         # remove the default interactions from this axis
-        for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax, i) end
+        for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deactivate_interaction!(ax, i) end
         # add the popout window interaction to this axis
         if :popout_axis ∉ keys(ax.interactions)
             register_interaction!(ax, :popout_axis) do event::MouseEvent, ax
                 if event.type === MouseEventTypes.leftclick
                     f_popout = Figure()
                     ax_popout = Axis(f_popout[1, 1]; aspect = DataAspect(), popoutargs...)
-                    for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deregister_interaction!(ax_popout, i) end
+                    for i in [:dragpan, :limitreset, :rectanglezoom, :scrollzoom] deactivate_interaction!(ax_popout, i) end
                     fillfrompvals(qg, pvals)
                     p_popout = qgplot(ax_popout, qg; vlabels=vlabels, layout=layout, title=topowerofphistr(amp), args...)
                     finalize(f_popout, [ax_popout])
@@ -148,9 +148,64 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
             end
         end
     end
-    #add_close_window_with_q_interaction!(axs[1])
-    # add normalization to figure title
-    N = get_normalization(states)
-    axs[1].parent[0, :] = Label(axs[1].parent, L"N = %$(topowerofDstr(N))", fontsize=24)
     plots
+end
+
+function add_normalization_to_title(f, N)
+    f[0, :] = Label(f, L"N = %$(topowerofDstr(N))", fontsize=24)
+end
+
+function displayig(ig::MetaGraph, l::NetworkLayouts.AbstractLayout)
+    f = Figure()
+    _, _, axs = getaxisgrid(f, 1)
+    p = igplot(axs[1], ig, layout=l)
+    finalize(f, axs)
+    display(GLMakie.Screen(), f)
+end
+
+function make_subdicts(d::Dict, size::Int)
+    ks = collect(keys(d))
+    [Dict(k => d[k] for k in ks[i:min(i+size-1, length(ks))])
+        for i in 1:size:length(ks)]
+end
+
+function displays(states::Dict, qg::MetaGraph, l::NetworkLayouts.AbstractLayout)
+    # maximum number of states we can have per pane, 5x8
+    maxstatesperpane = 40
+    # using exactly max states per pane
+    numpanes = Int(ceil(length(states) / maxstatesperpane))
+    # now move some states from the full panes to the last one
+    # so that each pane has roughly the same amount of states
+    statesperpane = Int(ceil(length(states) / numpanes))
+    # now move some states back from the last one so that each
+    # pane is perfectly filled
+    w, h = calculategridsidelengths(statesperpane)
+    statesperpane = w*h
+
+    # create the screen, figure, axes, etc
+    screen = GLMakie.Screen()
+    f = Figure()
+    w, h, axs = getaxisgrid(f, statesperpane)
+    sds = make_subdicts(states, statesperpane)
+
+    # set up slilders
+    sg = SliderGrid(f[h+1, :],
+                    (label="Pane #", range = 1:length(sds), startvalue = 1, update_while_dragging=false)
+                   )
+    sl = sg.sliders[1]
+    on(sl.value) do v
+        sd = sds[v[]]
+        for ax in axs
+            empty!(ax)
+            ax.title=""
+            deregister_interaction!(ax, :popout_axis)
+        end
+        plots = statesplot(axs, qg, sd, vlabels=false, layout=l, popoutargs=Dict(:titlesize=>28))
+    end
+
+    # finish setup
+    add_normalization_to_title(f, get_normalization(states))
+    plots = statesplot(axs, qg, sds[1], vlabels=false, layout=l, popoutargs=Dict(:titlesize=>28))
+    finalize(f, axs)
+    display(screen, f)
 end
