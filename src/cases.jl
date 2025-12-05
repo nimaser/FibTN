@@ -168,7 +168,7 @@ function case7()
 end
 
 function case8()
-    len = 6
+    len = 3
     rsg, pindict = hex_lattice(len, 1)
     cap_all!(rsg)
     
