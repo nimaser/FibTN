@@ -1,4 +1,6 @@
 using GLMakie, GraphMakie
+using Printf
+using Dates
 
 # function to generically plot a metagraph
 function metagraphplot(ax, mg::MetaGraph;
@@ -144,7 +146,24 @@ function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<
                             GLMakie.GLFW.SetWindowShouldClose(GLFW_win, true)
                         end
                     end
+                    # make window easily saveable via keyboard
+                    register_interaction!(ax_popout, :save_fig) do event::KeysEvent, ax
+                        if Keyboard.s ∈ event.keys
+                            fname = pwd() * "/imgs/" * string(now(Dates.UTC)) * ".png"
+                            @show ax.parent
+                            save(fname, ax.parent)
+                        end
+                    end
                 end
+            end
+        end
+    end
+    # add the savefig window interaction to this axis
+    if :save_fig ∉ keys(axs[1].interactions)
+        register_interaction!(axs[1], :save_fig) do event::KeysEvent, ax
+            if Keyboard.s ∈ event.keys
+                fname = pwd() * "/imgs/" * string(now(Dates.UTC)) * ".png"
+                save(fname, ax.parent)
             end
         end
     end
@@ -155,7 +174,7 @@ function add_normalization_to_title(f, N)
     f[0, :] = Label(f, L"N = %$(topowerofDstr(N))", fontsize=24)
 end
 
-function displayig(ig::MetaGraph, l::NetworkLayouts.AbstractLayout)
+function displayig(ig::MetaGraph, l::NetworkLayout.AbstractLayout)
     f = Figure()
     _, _, axs = getaxisgrid(f, 1)
     p = igplot(axs[1], ig, layout=l)
@@ -169,7 +188,7 @@ function make_subdicts(d::Dict, size::Int)
         for i in 1:size:length(ks)]
 end
 
-function displays(states::Dict, qg::MetaGraph, l::NetworkLayouts.AbstractLayout)
+function displays(states::Dict, qg::MetaGraph, l::NetworkLayout.AbstractLayout)
     # maximum number of states we can have per pane, 5x8
     maxstatesperpane = 40
     # using exactly max states per pane
@@ -198,14 +217,21 @@ function displays(states::Dict, qg::MetaGraph, l::NetworkLayouts.AbstractLayout)
         for ax in axs
             empty!(ax)
             ax.title=""
-            deregister_interaction!(ax, :popout_axis)
+            if :popout_axis ∈ keys(ax.interactions) deregister_interaction!(ax, :popout_axis) end
         end
         plots = statesplot(axs, qg, sd, vlabels=false, layout=l, popoutargs=Dict(:titlesize=>28))
     end
 
     # finish setup
     add_normalization_to_title(f, get_normalization(states))
-    plots = statesplot(axs, qg, sds[1], vlabels=false, layout=l, popoutargs=Dict(:titlesize=>28))
+    notify(sl.value)
     finalize(f, axs)
+    register_interaction!(axs[1], :change_pane) do event::KeysEvent, ax
+        if Keyboard.left ∈ event.keys
+            set_close_to!(sl, sl.value[] - 1)
+        elseif Keyboard.right ∈ event.keys
+            set_close_to!(sl, sl.value[] + 1)
+        end
+    end
     display(screen, f)
 end

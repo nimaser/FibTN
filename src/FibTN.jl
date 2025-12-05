@@ -3,9 +3,8 @@ end # module FibTN
 
 # define case and mode before running this script    
 
-using Printf
-using NetworkLayout
 using Serialization
+using NetworkLayout
 
 include("tensorbuilder.jl")
 include("networkbuilder.jl")
@@ -30,8 +29,8 @@ end
 if mode == :D
     gscalc = deserialize(pwd() * "/out/case$(case)")
 
-    displayig(gscalc)
-    displays(gscalc)
+    displayig(gscalc.ig, gscalc.l)
+    displays(gscalc.s, gscalc.qg, gscalc.l)
 else
     # get the rsg and display information
     include("cases.jl")
@@ -73,7 +72,7 @@ else
     end
 
     if mode == :V
-        displayig(gscalc)
-        displays(gscalc)
+        displayig(gscalc.ig, gscalc.l)
+        displays(gscalc.s, gscalc.qg, gscalc.l)
     end
 end
