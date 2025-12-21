@@ -29,7 +29,9 @@ end
 if mode == :D
     gscalc = deserialize(pwd() * "/out/case$(case)")
 
+    displayrsg(gscalc.rsg, gscalc.l)
     displayig(gscalc.ig, gscalc.l)
+    displayqg(gscalc.qg, gscalc.l)
     displays(gscalc.s, gscalc.qg, gscalc.l)
 else
     # get the rsg and display information
@@ -47,6 +49,9 @@ else
         pindict[k] = scale .* v .+ offset
     end
     l = NetworkLayout.Spring(pin=pindict)
+
+    #displayqg(qg, l)
+    #throw(ErrorException())
     
     # contract the tg
     contractcaps!(tg)
@@ -72,7 +77,9 @@ else
     end
 
     if mode == :V
+        displayrsg(gscalc.rsg, gscalc.l)
         displayig(gscalc.ig, gscalc.l)
+        displayqg(gscalc.qg, gscalc.l)
         displays(gscalc.s, gscalc.qg, gscalc.l)
     end
 end

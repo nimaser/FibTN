@@ -174,10 +174,26 @@ function add_normalization_to_title(f, N)
     f[0, :] = Label(f, L"N = %$(topowerofDstr(N))", fontsize=24)
 end
 
+function displayrsg(rsg::MetaGraph, l::NetworkLayout.AbstractLayout)
+    f = Figure()
+    _, _, axs = getaxisgrid(f, 1)
+    p = rsgplot(axs[1], rsg, layout=l)
+    finalize(f, axs)
+    display(GLMakie.Screen(), f)
+end
+
 function displayig(ig::MetaGraph, l::NetworkLayout.AbstractLayout)
     f = Figure()
     _, _, axs = getaxisgrid(f, 1)
     p = igplot(axs[1], ig, layout=l)
+    finalize(f, axs)
+    display(GLMakie.Screen(), f)
+end
+
+function displayqg(qg::MetaGraph, l::NetworkLayout.AbstractLayout)
+    f = Figure()
+    _, _, axs = getaxisgrid(f, 1)
+    p = qgplot(axs[1], qg, vlabels=false, layout=l)
     finalize(f, axs)
     display(GLMakie.Screen(), f)
 end
@@ -205,7 +221,7 @@ function displays(states::Dict, qg::MetaGraph, l::NetworkLayout.AbstractLayout)
     screen = GLMakie.Screen()
     f = Figure()
     w, h, axs = getaxisgrid(f, statesperpane)
-    for ax in axs ax.titlesize=24 end
+    for ax in axs ax.titlesize=32 end
     sds = make_subdicts(states, statesperpane)
 
     # set up slilders
