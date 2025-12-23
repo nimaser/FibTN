@@ -23,20 +23,7 @@
 
 using ITensors
 
-###############################################################################
-# FIBONACCI DATA
-###############################################################################
-
-# Fibonacci input category data; dim and N, F, R symbols
-using TensorKitSectors
-const qdim = TensorKitSectors.dim # to avoid name conflict
-
-function Gsymbol(
-        a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
-        d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
-    )
-    Fsymbol(a, b, c, d, e, f) / √(qdim(e)*qdim(f))
-end
+include("GSymbol.jl")
 
 ###############################################################################
 # INDEX CONVERSIONS
@@ -192,23 +179,44 @@ end
 
 @enum TensorType begin
     # misc
-    StringTripletVector   
-    StringTripletReflector
-    Composite
+    TripletVector
+    TripletReflector
+    Composite # result of contraction of other tensors
 
     # GS
-    GSTriangle
+    GSVertex
     GSTail
-    GSSquare
-    GSCircle
+    GSLoopAmplitude
+    GSStringCrossing
+    GSStringFusion
 
     # ES
 
 end
 
-function make_tensor_indices(tensorlabel::Any, type::TensorType)
+mutable struct TensorData
+    label::Any
+    type::TensorType
+    constructiondata::Dict
+    vinds::Vector{Index}
+    pinds::Vector{Index}
+    tensor::ITensor
+    TensorData(l, t, d) = new(l, t, d)
+end
+
+function instantiate_indices(td::TensorData)
+    if td.type == TripletVector
+        v1 = Index(5, "virt,$(td.label)-v1")
+        td.indices = 
+    end
+
+end
+
+
+
+function make_tensor_indices(label::Any, type::TensorType)
     # misc
-    if type == StringTripletVector
+    if type == TripletVector
         v1 = Index(5, "virt,$(tensorlabel)-v1")
         return [v1], []
     end

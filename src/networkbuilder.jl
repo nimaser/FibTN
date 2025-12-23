@@ -11,7 +11,12 @@ using ITensors
 # GS LATTICE CONSTRUCTION
 ###############################################################################
 
+
 ### ROTATION SYSTEM GRAPH ###
+
+const igEdgeData = Set{Index}
+const igVertexData = @NamedTuple{type::TensorType, }
+
 
 const rsgEdgeCycle = Vector{Int}
 const rsgVertexData = @NamedTuple{type::TensorType, ecycle::rsgEdgeCycle}
