@@ -21,7 +21,8 @@
 # virtual or physical index for this tensor respectively.
 =#
 
-using ITensors
+using ITensorBase: ITensorBase, settag
+using SparseArraysBase
 
 ###############################################################################
 # FIBONACCI DATA
@@ -87,8 +88,10 @@ end
 
 function make_StringTripletVector(vinds::Vector{Index}, a::Int)
     if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 1")) end
-    if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
-    onehot(vinds[1]=>a)
+    if vinds[1].value.stop != 5 throw(ArgumentError("got vind with dimension $(vinds[1].value.stop), not 5")) end
+    arr = SparseArrayDOK{Float64}(undef, 5)
+    arr[a] = 1
+    ITensor(arr, vinds[1])
 end
 
 function make_VacuumLoopAmplitude(vinds::Vector{Index})
@@ -97,8 +100,8 @@ end
 
 function make_LoopAmplitude(vinds::Vector{Index}, amps::Dict)
     if length(vinds) != 1 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
-    if vinds[1].space != 5 throw(ArgumentError("got vind with dimension $(vinds[1].space), not 5")) end
-    arr = zeros(Float64, 5)
+    if vinds[1].value.stop != 5 throw(ArgumentError("got vind with dimension $(vinds[1].value.stop), not 5")) end
+    arr = SparseArrayDOK{Float64}(undef, 5)
     # this only affects one plaquette adjacent to the edge it is placed on, not two 
     arr[1] = amps[FibonacciAnyon(:I)]
     arr[2] = amps[FibonacciAnyon(:I)]
@@ -111,13 +114,14 @@ end
 function make_StringTripletReflector(vinds::Vector{Index})
     if length(vinds) != 2 throw(ArgumentError("got $(length(vinds)) vinds, not 2")) end
     for vind in vinds
-        if vind.space != 5 throw(ArgumentError("got vind with dimension $(vind.space), not 5")) end
+        if vind.value.stop != 5 throw(ArgumentError("got vind with dimension $(vind.value.stop), not 5")) end
     end
-    arr = [1 0 0 0 0;
-           0 0 0 1 0;
-           0 0 1 0 0;
-           0 1 0 0 0;
-           0 0 0 0 1]
+    arr = SparseArrayDOK{Float64}(undef, 5, 5)
+    arr[1, 1] = 1
+    arr[2, 4] = 1
+    arr[3, 3] = 1
+    arr[4, 2] = 1
+    arr[5, 5] = 1
     ITensor(arr, vinds...)
 end
 
@@ -126,7 +130,7 @@ end
 ###############################################################################
 
 function GSTriangle_data()
-    GSTriangle_data = zeros(Float64, 5, 5, 5, 5)
+    GSTriangle_data = SparseArrayDOK{Float64}(undef, 5, 5, 5, 5)
     for a in 1:5
         for b in 1:5
             for c in 1:5
@@ -162,9 +166,9 @@ function make_GSTriangle(vinds, pinds)
 
     # check that indices have the right dimensionality
     for vind in vinds
-        if vind.space != 5 throw(ArgumentError("got vind with dimension $(vind.space), not 5")) end
+        if vind.value.stop != 5 throw(ArgumentError("got vind with dimension $(vind.value.stop), not 5")) end
     end
-    if pinds[1].space != 5 throw(ArgumentError("got pind with dimension $(pinds[1].space), not 5")) end
+    if pinds[1].value.stop != 5 throw(ArgumentError("got pind with dimension $(pinds[1].value.stop), not 5")) end
 
     ITensor(GSTriangle_data(), vinds..., pinds...)
 end
@@ -209,7 +213,7 @@ end
 function make_tensor_indices(tensorlabel::Any, type::TensorType)
     # misc
     if type == StringTripletVector
-        v1 = Index(5, "virt,$(tensorlabel)-v1")
+        v1 = Index(5; tags=Dict("tensorlabel"=>string(tensorlabel),"type"=>"virt","num"=>"1"))
         return [v1], []
     end
     if type == StringTripletReflector
@@ -221,10 +225,10 @@ function make_tensor_indices(tensorlabel::Any, type::TensorType)
 
     # GS
     if type == GSTriangle
-        v1 = Index(5, "virt,$(tensorlabel)-v1")
-        v2 = Index(5, "virt,$(tensorlabel)-v2")
-        v3 = Index(5, "virt,$(tensorlabel)-v3")
-        p1 = Index(5, "phys,$(tensorlabel)-p1")
+        v1 = Index(5; tags=Dict("tensorlabel"=>string(tensorlabel),"type"=>"virt","num"=>"1"))
+        v2 = Index(5; tags=Dict("tensorlabel"=>string(tensorlabel),"type"=>"virt","num"=>"2"))
+        v3 = Index(5; tags=Dict("tensorlabel"=>string(tensorlabel),"type"=>"virt","num"=>"3"))
+        p1 = Index(5; tags=Dict("tensorlabel"=>string(tensorlabel),"type"=>"phys","num"=>"1"))
         return [v1, v2, v3], [p1]
     end
     if type == GSTail
@@ -257,7 +261,7 @@ function get_indexidx(i::Index)
     split(idtag, '-')[2]
 end
 
-function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}, data::Any=nothing)
+function make_tensor(type::TensorType, vinds, pinds, data::Any=nothing)
     if type == StringTripletVector
         data = data == nothing ? 1 : data
         return make_StringTripletVector(vinds, data)

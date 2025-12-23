@@ -272,3 +272,4 @@ function case10()
     add_plaquette!(5, 3, 4)
     add_plaquette!(6, 4, 4)
     cap_all!(rsg)
+end
