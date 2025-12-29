@@ -6,6 +6,7 @@ using Graphs
 using MetaGraphsNext
 
 using ITensorBase: ITensorBase, settag, prime
+using ITensors: δ
 using SparseArraysBase
 
 ###############################################################################
@@ -318,7 +319,7 @@ function add_loop_superposition!(tg::MetaGraph, v1::Int, v2::Int, amps)
     # the delta to keep an extra index to later contract with the GSVertex tensor
     RT = collect(tg[v1, v2])[1]
     for RTindex in RT.inds prime(RTindex) end
-    NRT = δ(vind, vind', vind'') * RT * make_LoopAmplitude(Index[vind''], amps)
+    NRT = δ(vind, prime(vind), prime(prime(vind))) * RT * make_LoopAmplitude(Index[prime(prime(vind))], amps)
     # unprime the indices of the new reflection tensor, then put it back into the edge
     for RTindex in RT.inds noprime(RTindex) end
     tg[v1, v2] = Set([NRT])

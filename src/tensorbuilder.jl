@@ -21,7 +21,7 @@
 # virtual or physical index for this tensor respectively.
 =#
 
-using ITensorBase: ITensorBase, settag
+using ITensorBase: ITensorBase, settag, Index, ITensor
 using SparseArraysBase
 
 ###############################################################################
