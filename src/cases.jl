@@ -9,6 +9,9 @@ CASES = [:case1,
          :case8,
          :case9,
          :case9h,
+         :case10a,
+         :case10b,
+         :case11,
         ]
 
 function case1()
@@ -266,9 +269,39 @@ function case9h()
     rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
 
-function case10()
+function case10a()
     rsg = new_plaquette(3)
-    add_plaquette!(1, 2, 4)
-    add_plaquette!(5, 3, 4)
-    add_plaquette!(6, 4, 4)
+    add_plaquette!(rsg, 1, 2, 4)
+    add_plaquette!(rsg, 5, 4, 6)
     cap_all!(rsg)
+
+end
+
+function case10b()
+    rsg = new_plaquette(4)
+    add_plaquette!(rsg, 1, 3, 6)
+    add_plaquette!(rsg, 7, 5, 6)
+    cap_all!(rsg)
+
+    contractionsequences = [[1, 2, 3, 4], [5, 6, 7, 8], [1, 5]]
+
+    pindict = Dict(1=>(0,1),
+                   2=>(1,0),
+                   3=>(0,-1),
+                   4=>(-1,0),
+                   5=>(0,2),
+                   6=>(2,0),
+                   7=>(0,-2),
+                   8=>(-2,0),
+                  )
+
+    offset = (0, 0)
+    scale = 1
+    nlabeloffsetscale = 0.3
+
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
+end
+
+function case11()
+
+end

@@ -44,8 +44,8 @@ indexiter2label = ii -> join([get_idtag(i) for i in ii], ';')
 tensoriter2label = ti -> join([indexiter2label(inds(t)) for t in ti], " ")
 
 # define some convenience functions to determine node shapes and colors based on tensor type
-type2shape = t -> t == GSTriangle ? :hexagon : t == StringTripletVector ? :star4 : :circle
-type2color = t -> t == GSTriangle ? :black : t == StringTripletVector ? :gray : :blue
+type2shape = t -> t == GSTriangle ? :hexagon : t == TrivialStringTripletVector ? :star4 : :circle
+type2color = t -> t == GSTriangle ? :black : t == TrivialStringTripletVector ? :gray : :blue
 
 # use Julia's closures to make partially filled functions for specialized plotting
 rsgplot(ax, mg::MetaGraph; args...) = metagraphplot(ax, mg;

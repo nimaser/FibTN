@@ -192,7 +192,8 @@ end
 
 @enum TensorType begin
     # misc
-    StringTripletVector   
+    TrivialStringTripletVector   
+    PassthroughStringTripletVector
     StringTripletReflector
     Composite
 
@@ -208,7 +209,11 @@ end
 
 function make_tensor_indices(tensorlabel::Any, type::TensorType)
     # misc
-    if type == StringTripletVector
+    if type == TrivialStringTripletVector
+        v1 = Index(5, "virt,$(tensorlabel)-v1")
+        return [v1], []
+    end
+    if type == PassthroughStringTripletVector
         v1 = Index(5, "virt,$(tensorlabel)-v1")
         return [v1], []
     end
@@ -258,9 +263,11 @@ function get_indexidx(i::Index)
 end
 
 function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index}, data::Any=nothing)
-    if type == StringTripletVector
-        data = data == nothing ? 1 : data
-        return make_StringTripletVector(vinds, data)
+    if type == TrivialStringTripletVector
+        return make_StringTripletVector(vinds, 1)
+    end
+    if type == PassthroughStringTripletVector
+        return make_StringTripletVector(vinds, 1) + make_StringTripletVector(vinds, 3)
     end
     if type == StringTripletReflector
         return make_StringTripletReflector(vinds)

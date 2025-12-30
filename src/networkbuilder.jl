@@ -140,11 +140,25 @@ function add_cap!(rsg::MetaGraph, v::Int)
     # check that v will not get too many edges
     if degree(rsg, code_for(rsg, v)) >= 3 throw(ErrorException("Cannot add cap to vertex $v")) end
 
+    # check if the cap will be on the boundary or inside of a plaquette
+    onboundary = false
+    for edge in rsg[]
+        if edge[1] == v || edge[2] == v
+            onboundary = true
+        end
+    end
+
     # add new vertex
     nextindex = nv(rsg) + 1
-    rsg[nextindex] = rsgVertexData((StringTripletVector, [v]))
+    if onboundary
+        rsg[nextindex] = rsgVertexData((TrivialStringTripletVector, [v]))
+        @show v "onboundary"
+    else
+        rsg[nextindex] = rsgVertexData((PassthroughStringTripletVector, [v]))
+        @show v "offboundary"
+    end
 
-    # modify edge cycle in v - cap will be on the outside, though I don't think it matters
+    # modify edge cycle in v
     insert!(rsg[v].ecycle, 2, nextindex)
 
     # add new edge
