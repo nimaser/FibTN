@@ -275,6 +275,21 @@ function case10a()
     add_plaquette!(rsg, 5, 4, 6)
     cap_all!(rsg)
 
+    contractionsequences = [collect(1:6)]
+
+    pindict = Dict(1=>(1, 1),
+                   2=>(1,-1),
+                   3=>(-1,0),
+                   4=>(2,2),
+                   5=>(2,-2),
+                   6=>(-2,0),
+                  )
+
+    offset = (0,0)
+    scale=1
+    nlabeloffsetscale=0.3
+
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
 
 function case10b()
