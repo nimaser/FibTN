@@ -318,5 +318,53 @@ function case10b()
 end
 
 function case11()
+    rsg = new_plaquette(3)
+    add_plaquette!(rsg, 1, 2, 4)
+    add_plaquette!(rsg, 5, 3, 4)
+    add_plaquette!(rsg, 6, 4, 4)
+    cap_all!(rsg)
 
+    contractionsequences = [collect(1:6)]
+
+    pindict = Dict(1=>(0,1),
+                   2=>(1,-1),
+                   3=>(-1,-1),
+                   4=>(0,2),
+                   5=>(2,-2),
+                   6=>(-2,-2),
+                  )
+
+    offset = (0,0)
+    scale=1
+    nlabeloffsetscale=0.3
+
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
+
+function case12()
+    rsg = new_plaquette(4)
+    add_plaquette!(rsg, 1, 2, 4)
+    add_plaquette!(rsg, 6, 3, 4)
+    add_plaquette!(rsg, 7, 4, 4)
+    add_plaquette!(rsg, 8, 5, 4)
+    cap_all!(rsg)
+
+    contractionsequences = [collect(1:8)]
+
+    pindict = Dict(1=>(0,1),
+                   2=>(1,0),
+                   3=>(0,-1),
+                   4=>(-1,0),
+                   5=>(0,2),
+                   6=>(2,0),
+                   7=>(0,-2),
+                   8=>(-1,0),
+                  )
+
+    offset=(0,0)
+    scale=1
+    nlabeloffsetscale=0.3
+
+    rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
+end
+

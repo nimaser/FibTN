@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "7f6ce0d3a1419d697fb29fd0ef49fbbec2d3fd1f"
+project_hash = "67e943fefe4008147d2bb16051f7c9de46fd7f90"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -396,6 +396,16 @@ git-tree-sha1 = "783b21581a051ac91a3921ee37e26a23ed7f57a6"
 uuid = "927a84f5-c5f4-47a5-9785-b46e178433df"
 version = "1.6.5"
 
+[[deps.DerivableInterfaces]]
+deps = ["Adapt", "ArrayLayouts", "Compat", "ExproniconLite", "FillArrays", "LinearAlgebra", "MLStyle", "MapBroadcast", "TypeParameterAccessors"]
+git-tree-sha1 = "89f54d43cf68869f03a4124140c5f60595a60029"
+uuid = "6c5e35bf-e59e-4898-b73c-732dcc4ba65f"
+version = "0.5.5"
+weakdeps = ["BlockArrays"]
+
+    [deps.DerivableInterfaces.extensions]
+    DerivableInterfacesBlockArraysExt = "BlockArrays"
+
 [[deps.Dictionaries]]
 deps = ["Indexing", "Random", "Serialization"]
 git-tree-sha1 = "a86af9c4c4f33e16a2b2ff43c2113b2f390081fa"
@@ -473,6 +483,11 @@ git-tree-sha1 = "27415f162e6028e81c72b82ef756bf321213b6ec"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
 version = "0.1.10"
 
+[[deps.ExproniconLite]]
+git-tree-sha1 = "c13f0b150373771b0fdc1713c97860f8df12e6c2"
+uuid = "55351af7-c7e9-48d6-89ff-24e801d99491"
+version = "0.10.14"
+
 [[deps.Extents]]
 git-tree-sha1 = "b309b36a9e02fe7be71270dd8c0fd873625332b4"
 uuid = "411431e0-e8b7-467b-b5e0-f676ba4f2910"
@@ -502,7 +517,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.11+0"
 
 [[deps.FibTN]]
-deps = ["GraphMakie", "Graphs", "ITensors", "MetaGraphsNext", "NetworkLayout", "TensorKitSectors"]
+deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NetworkLayout", "SparseArraysBase", "TensorKitSectors"]
 path = "."
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
@@ -644,6 +659,12 @@ git-tree-sha1 = "f2f1a514108c08f9e278e96972c3d50413bf5095"
 uuid = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 version = "0.13.7"
 
+[[deps.GPUArraysCore]]
+deps = ["Adapt"]
+git-tree-sha1 = "83cf05ab16a73219e5f6bd1bdfa9848fa24ac627"
+uuid = "46192b85-c4d5-4398-a991-12ede77f4527"
+version = "0.2.0"
+
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "Extents", "IterTools", "LinearAlgebra", "PrecompileTools", "Random", "StaticArrays"]
 git-tree-sha1 = "1f5a80f4ed9f5a4aada88fc2db456e637676414b"
@@ -728,6 +749,12 @@ deps = ["LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
 git-tree-sha1 = "68c173f4f449de5b438ee67ed0c9c748dc31a2ec"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.28"
+
+[[deps.ITensorBase]]
+deps = ["Accessors", "ConstructionBase", "DerivableInterfaces", "FillArrays", "LinearAlgebra", "MapBroadcast", "NamedDimsArrays", "Random", "TensorAlgebra", "UnallocatedArrays", "UnspecifiedTypes", "VectorInterface"]
+git-tree-sha1 = "67ef1df05571d9170e0029d7ddaf23d8b998eac0"
+uuid = "4795dd04-0d67-49bb-8f44-b89c448a1dc7"
+version = "0.4.1"
 
 [[deps.ITensors]]
 deps = ["Adapt", "BitIntegers", "ChainRulesCore", "Compat", "Dictionaries", "DocStringExtensions", "Functors", "IsApprox", "LinearAlgebra", "NDTensors", "Pkg", "Printf", "Random", "Requires", "SerializedElementArrays", "SimpleTraits", "SparseArrays", "StaticArrays", "Strided", "TimerOutputs", "TupleTools", "Zeros"]
@@ -1124,6 +1151,11 @@ git-tree-sha1 = "282cadc186e7b2ae0eeadbd7a4dffed4196ae2aa"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2025.2.0+0"
 
+[[deps.MLStyle]]
+git-tree-sha1 = "bc38dff0548128765760c79eb7388a4b37fae2c8"
+uuid = "d8e11817-5142-5d16-987a-aa16d5891078"
+version = "0.4.17"
+
 [[deps.MacroTools]]
 git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
@@ -1141,6 +1173,12 @@ version = "0.24.7"
     [deps.Makie.weakdeps]
     DynamicQuantities = "06fc5a27-2a28-4c7c-a15d-362465fb6821"
 
+[[deps.MapBroadcast]]
+deps = ["BlockArrays", "Compat", "FillArrays"]
+git-tree-sha1 = "890144ebab21c987d8928412f058751dda3b68db"
+uuid = "ebd9b9da-f48d-417c-9660-449667d60261"
+version = "0.1.11"
+
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
 uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
@@ -1156,6 +1194,28 @@ deps = ["AbstractTrees", "Automa", "DataStructures", "FreeTypeAbstraction", "Geo
 git-tree-sha1 = "7eb8cdaa6f0e8081616367c10b31b9d9b34bb02a"
 uuid = "0a4f8689-d25c-4efe-a92b-7142dfc1aa53"
 version = "0.6.7"
+
+[[deps.MatrixAlgebraKit]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "bb24a987934937bcb1a05285aacfce28afdcf5fb"
+uuid = "6c742aac-3347-4629-af66-fc926824e5e4"
+version = "0.6.0"
+
+    [deps.MatrixAlgebraKit.extensions]
+    MatrixAlgebraKitAMDGPUExt = "AMDGPU"
+    MatrixAlgebraKitCUDAExt = "CUDA"
+    MatrixAlgebraKitChainRulesCoreExt = "ChainRulesCore"
+    MatrixAlgebraKitGenericLinearAlgebraExt = "GenericLinearAlgebra"
+    MatrixAlgebraKitGenericSchurExt = "GenericSchur"
+    MatrixAlgebraKitMooncakeExt = "Mooncake"
+
+    [deps.MatrixAlgebraKit.weakdeps]
+    AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    GenericLinearAlgebra = "14197337-ba66-59df-a3e3-ca00e7dcff7a"
+    GenericSchur = "c145ed77-6b09-5dd9-b285-bf645a82121e"
+    Mooncake = "da2b9cff-9c12-43a0-ae48-6db2b0edb7d6"
 
 [[deps.MeshIO]]
 deps = ["ColorTypes", "FileIO", "GeometryBasics", "Printf"]
@@ -1230,6 +1290,17 @@ version = "0.4.16"
     Octavian = "6fd5a793-0b7e-452c-907f-f8bfe9c57db4"
     TBLIS = "48530278-0828-4a49-9772-0f3830dfa1e9"
     cuTENSOR = "011b41b2-24ef-40a8-b3eb-fa098493e9e1"
+
+[[deps.NamedDimsArrays]]
+deps = ["Adapt", "ArrayLayouts", "Compat", "DerivableInterfaces", "FillArrays", "LinearAlgebra", "MapBroadcast", "Random", "SimpleTraits", "TensorAlgebra", "TupleTools", "TypeParameterAccessors", "VectorInterface"]
+git-tree-sha1 = "ea756b6cc8c1c72902154b93c1278f63c764024b"
+uuid = "60cbd0c0-df58-4cb7-918c-6f5607b73fde"
+version = "0.10.0"
+weakdeps = ["AbstractTrees", "BlockArrays"]
+
+    [deps.NamedDimsArrays.extensions]
+    NamedDimsArraysAbstractTreesExt = "AbstractTrees"
+    NamedDimsArraysBlockArraysExt = "BlockArrays"
 
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
@@ -1624,6 +1695,17 @@ deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
 uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 version = "1.12.0"
 
+[[deps.SparseArraysBase]]
+deps = ["Accessors", "Adapt", "ArrayLayouts", "DerivableInterfaces", "Dictionaries", "FillArrays", "GPUArraysCore", "LinearAlgebra", "MapBroadcast", "Random", "SparseArrays", "TypeParameterAccessors"]
+git-tree-sha1 = "7cc149df72d33ccce1975a663924e777cfab48da"
+uuid = "0d5efcca-f356-4864-8770-e1ed8d78f208"
+version = "0.7.10"
+weakdeps = ["NamedDimsArrays", "TensorAlgebra"]
+
+    [deps.SparseArraysBase.extensions]
+    SparseArraysBaseNamedDimsArraysExt = "NamedDimsArrays"
+    SparseArraysBaseTensorAlgebraExt = ["TensorAlgebra", "SparseArrays"]
+
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
 git-tree-sha1 = "f2685b435df2613e25fc10ad8c26dddb8640f547"
@@ -1814,6 +1896,16 @@ deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
+[[deps.TensorAlgebra]]
+deps = ["ArrayLayouts", "BlockArrays", "EllipsisNotation", "LinearAlgebra", "MatrixAlgebraKit", "TupleTools", "TypeParameterAccessors"]
+git-tree-sha1 = "10b32a74f5f232a25c9aeb85ad2b28cdd2ce6c92"
+uuid = "68bd88dc-f39d-4e12-b2ca-f046b68fcc6a"
+version = "0.6.6"
+weakdeps = ["TensorOperations"]
+
+    [deps.TensorAlgebra.extensions]
+    TensorAlgebraTensorOperationsExt = "TensorOperations"
+
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
@@ -1909,10 +2001,40 @@ git-tree-sha1 = "41e43b9dc950775eac654b9f845c839cd2f1821e"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.6.0"
 
+[[deps.TypeParameterAccessors]]
+deps = ["LinearAlgebra", "SimpleTraits"]
+git-tree-sha1 = "2990199b1933ef8f7d32ff15536be1f07c2d3346"
+uuid = "7e5a90cf-f82e-492e-a09b-e3e26432c138"
+version = "0.4.5"
+
+    [deps.TypeParameterAccessors.extensions]
+    TypeParameterAccessorsAMDGPUExt = "AMDGPU"
+    TypeParameterAccessorsCUDAExt = "CUDA"
+    TypeParameterAccessorsFillArraysExt = "FillArrays"
+    TypeParameterAccessorsJLArraysExt = "JLArrays"
+    TypeParameterAccessorsMetalExt = "Metal"
+    TypeParameterAccessorsStridedViewsExt = "StridedViews"
+    TypeParameterAccessorsoneAPIExt = "oneAPI"
+
+    [deps.TypeParameterAccessors.weakdeps]
+    AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+    FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+    JLArrays = "27aeb0d3-9eb9-45fb-866b-73c2ecf80fcb"
+    Metal = "dde4c033-4e86-420c-a63e-0dd931031962"
+    StridedViews = "4db3bf67-4bd7-4b4e-b153-31dc3fb37143"
+    oneAPI = "8f75cd03-7ff8-4ecb-9b8f-daf728133b1b"
+
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 version = "1.11.0"
+
+[[deps.UnallocatedArrays]]
+deps = ["Adapt", "FillArrays", "TypeParameterAccessors", "UnspecifiedTypes"]
+git-tree-sha1 = "78baf7f29f3c68eedd6cb12a0f6a6f3386434c27"
+uuid = "43c9e47c-e622-40fb-bf18-a09fc8c466b6"
+version = "0.1.9"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
@@ -1944,6 +2066,11 @@ version = "1.25.1"
     LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
     Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
     Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.UnspecifiedTypes]]
+git-tree-sha1 = "fd5d2dd706391392f01fad61e9a1ff2022f92fb9"
+uuid = "42b3faec-625b-4613-8ddc-352bf9672b8d"
+version = "0.1.7"
 
 [[deps.VectorInterface]]
 deps = ["LinearAlgebra"]

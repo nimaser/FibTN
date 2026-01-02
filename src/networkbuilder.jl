@@ -152,10 +152,8 @@ function add_cap!(rsg::MetaGraph, v::Int)
     nextindex = nv(rsg) + 1
     if onboundary
         rsg[nextindex] = rsgVertexData((TrivialStringTripletVector, [v]))
-        @show v "onboundary"
     else
         rsg[nextindex] = rsgVertexData((PassthroughStringTripletVector, [v]))
-        @show v "offboundary"
     end
 
     # modify edge cycle in v
@@ -408,13 +406,18 @@ function tensor2states(T::ITensor)
 
     # get nonzero entries/states
     Tarr = array(T)
-    nzidxs = findall(!iszero, Tarr) # each entry describes a state in terms of its pind values
+    isapproxzero(x) = isapprox(x, 0, atol=eps(typeof(x)))
+    nzidxs = findall(!isapproxzero, Tarr) # each entry describes a state in terms of its pind values
 
     # get mapping from pind to pval for a specific state s (ie entry in nzidxs)
     pind2pval = s -> Dict(pinds[i]=>v for (i, v) in enumerate(s))
 
     # make dict from state to (dict from pind to pval), state amplitude
     states = Dict(s=>(pind2pval(Tuple(s)), Tarr[s]) for s in nzidxs)
+end
+
+function get_amps(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
+    Dict(idx=>(amp, topowerofphistr(amp)) for (idx, (pvals, amp)) in states)
 end
 
 function get_normalization(states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}})
