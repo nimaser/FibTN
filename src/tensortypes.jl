@@ -1,9 +1,12 @@
 module TensorTypes
 
-export AbstractTensorType, index_labels
-export Elbow, Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
+export AbstractTensorType
+export Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
+export index_labels, tensor_data
 
 using ..IndexLabels
+
+### TENSOR TYPES ###
 
 abstract type AbstractTensorType end
 
@@ -16,6 +19,8 @@ struct Fusion           <: AbstractTensorType end
 struct End              <: AbstractTensorType end
 struct Excitation       <: AbstractTensorType end
 struct DoubledFusion    <: AbstractTensorType end
+
+### TENSOR INDEX LABELS ###
 
 index_labels(::Type{Reflector}) = [
     IndexLabel(:a, VIRT),
@@ -64,5 +69,52 @@ index_labels(::Type{Excitation}) = [
 index_labels(::Type{DoubledFusion}) = [
 #TODO
 ]
+
+### TENSOR DATA ###
+
+const _cache = IdDict{DataType,Any}()
+
+function tensor_data(::Type{T}) where {T <: AbstractTensorType}
+    key = T
+    get!(_cache, key) do
+        generate_tensor_data(T)
+    end
+end
+
+function generate_tensor_data(::Type{Reflector})
+    # TODO
+end
+
+function generate_tensor_data(::Type{LoopAmplitude})
+    # TODO
+end
+
+function generate_tensor_data(::Type{Vertex})
+    # TODO
+end
+
+function generate_tensor_data(::Type{Tail})
+    # TODO
+end
+
+function generate_tensor_data(::Type{Crossing})
+    # TODO
+end
+
+function generate_tensor_data(::Type{Fusion})
+    # TODO
+end
+
+function generate_tensor_data(::Type{End})
+    # TODO
+end
+
+function generate_tensor_data(::Type{Excitation})
+    # TODO
+end
+
+function generate_tensor_data(::Type{DoubledFusion})
+    # TODO
+end
 
 end # module TensorTypes
