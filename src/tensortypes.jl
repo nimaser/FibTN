@@ -2,9 +2,7 @@ module TensorTypes
 
 export AbstractTensorType
 export Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
-export index_labels, tensor_data
-
-using ..IndexLabels
+export index_data, tensor_data
 
 ### TENSOR TYPES ###
 
@@ -20,55 +18,55 @@ struct End              <: AbstractTensorType end
 struct Excitation       <: AbstractTensorType end
 struct DoubledFusion    <: AbstractTensorType end
 
-### TENSOR INDEX LABELS ###
+### TENSOR INDEX DATA (OMITTING TENSOR ID) ###
 
-index_labels(::Type{Reflector}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-]
+index_data(::Type{Reflector}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+)
 
-index_labels(::Type{LoopAmplitude}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-]
+index_data(::Type{LoopAmplitude}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+)
 
-index_labels(::Type{Vertex}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-    IndexLabel(:c, VIRT),
-    IndexLabel(:q, PHYS),
-]
+index_data(::Type{Vertex}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+    Tuple(:c, VIRT, 5),
+    Tuple(:q, PHYS, 5),
+)
 
-index_labels(::Type{Tail}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-    IndexLabel(:q, PHYS),
-]
+index_data(::Type{Tail}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+    Tuple(:q, PHYS, 5),
+)
 
-index_labels(::Type{Crossing}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-    IndexLabel(:c, VIRT),
-    IndexLabel(:d, VIRT),
-]
+index_data(::Type{Crossing}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+    Tuple(:c, VIRT, 5),
+    Tuple(:d, VIRT, 5),
+)
 
-index_labels(::Type{Fusion}) = [
-    IndexLabel(:a, VIRT),
-    IndexLabel(:b, VIRT),
-    IndexLabel(:c, VIRT),
-]
+index_data(::Type{Fusion}) = (
+    Tuple(:a, VIRT, 5),
+    Tuple(:b, VIRT, 5),
+    Tuple(:c, VIRT, 5),
+)
 
-index_labels(::Type{End}) = [
+index_data(::Type{End}) = (
 #TODO
-]
+)
 
-index_labels(::Type{Excitation}) = [
+index_data(::Type{Excitation}) = (
 #TODO
-]
+)
 
-index_labels(::Type{DoubledFusion}) = [
+index_data(::Type{DoubledFusion}) = (
 #TODO
-]
+)
 
 ### TENSOR DATA ###
 
