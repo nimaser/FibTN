@@ -27,4 +27,8 @@ function contract(th1::TensorHandle{ITensorsBackend}, th2::TensorHandle{ITensors
     TensorHandle{ITensorsBackend}(new_tensor, new_index_map)
 end
 
+function trace(th::TensorHandle{ITensorsBackend}, cs::ContractionSpec)
+    contract(th, TensorHandle(ITensorsBackend, [], Dict()), cs)
+end
+
 end # module ITensorsInterface
