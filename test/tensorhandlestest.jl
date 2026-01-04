@@ -33,7 +33,7 @@ end
     @test_throws "dimension mismatch" ContractionSpec((id1=>id5, id3=>id4))
 end
 
-@testset "TensorHandle basics" begin
+@testset "DummyBackend construction" begin
     struct DummyBackend <: AbstractBackend end
     
     SIZE = 2
@@ -50,13 +50,14 @@ end
     @test th.index_map === index_map
 end
 
-@testset "unimplemented contraction" begin
+@testset "unimplemented contract" begin
     struct DummyBackend <: AbstractBackend end
 
     th1 = TensorHandle{DummyBackend}(rand(2,2), Dict())
     th2 = TensorHandle{DummyBackend}(rand(2,2), Dict())
-    cs = ContractionSpec([])
+    cs = ContractionSpec(())
     
     # check that if contract isn't implemented for an AbstractBackend subtype, it errors
     @test_throws "DummyBackend" contract(th1, th2, cs)
 end
+
