@@ -338,6 +338,8 @@ function case11()
     scale=1
     nlabeloffsetscale=0.3
 
+    make_boundary_trivial!(rsg)
+
     rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
 
@@ -364,6 +366,8 @@ function case12()
     offset=(0,0)
     scale=1
     nlabeloffsetscale=0.3
+
+    make_boundary_trivial!(rsg)
 
     rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end
@@ -394,6 +398,8 @@ function case13()
     offset=(0,0)
     scale=1
     nlabeloffsetscale=0.3
+
+    make_boundary_trivial!(rsg)
 
     rsg, contractionsequences, pindict, offset, scale, nlabeloffsetscale
 end

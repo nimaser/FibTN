@@ -107,17 +107,23 @@ function getrationalpower(x::Float64, b::Float64)
     n, d = numerator(r), denominator(r)
 end
 
-function topowerofbasestr(x::Float64, b::Float64, bstr::String) 
+function topowerofbasestr(x::Float64, b::Float64, bstr::String, mtol::Float64) 
     isnegative = x < 0
     x = isnegative ? -x : x
     n, d = getrationalpower(x, b)
+
+    if !isapprox(x, b^(n/d), atol=mtol*eps(typeof(x)))
+        diff = (x - b^(n/d))
+        @show x, n, d, diff, diff / eps(Float64)
+        return string(x)
+    end
     s = n == 0 ? "0" : d == 1 ? n : n == d ? "1" : "$n/$d"
     s = "$(bstr)^{$s}"
     s = isnegative ? L"-%$s" : L"%$s"
 end
 
-topowerofphistr(x::Float64) = topowerofbasestr(x, qdim(FibonacciAnyon(:τ)), "\\phi")
-topowerofDstr(x::Float64) = topowerofbasestr(x, sqrt(qdim(FibonacciAnyon(:I))^2 + qdim(FibonacciAnyon(:τ))^2), "D")
+topowerofphistr(x::Float64) = topowerofbasestr(x, qdim(FibonacciAnyon(:τ)), "\\phi", 6.0)
+topowerofDstr(x::Float64) = topowerofbasestr(x, sqrt(qdim(FibonacciAnyon(:I))^2 + qdim(FibonacciAnyon(:τ))^2), "D", 500.0)
 
 # convenience function to plot all results of a computation on a vector of axes
 function statesplot(axs, qg::MetaGraph, states::Dict{<:CartesianIndex, <:Tuple{<:Dict{<:Index, Int}, Float64}}; vlabels::Bool=true, layout::Any=Spring(), popoutargs::Dict=nothing, args...)
