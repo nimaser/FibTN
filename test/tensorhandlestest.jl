@@ -1,4 +1,4 @@
-using ..TensorHandles
+using FibTN.TensorHandles
 
 @testset "IndexData basics" begin
     # check that construction works
@@ -29,8 +29,9 @@ end
     id5 = IndexData(2, :a, VIRT, 2)
     
     # check that construction works and dimension constraints are checked
-    ContractionSpec((id1=>id2, id3=>id4))
-    @test_throws "dimension mismatch" ContractionSpec((id1=>id5, id3=>id4))
+    ContractionSpec([id1=>id2, id3=>id4])
+    @test_throws "dimension mismatch" ContractionSpec([id1=>id5, id3=>id4])
+    @test_throws "appears twice" ContractionSpec([id3=>id4, id3=>id5])
 end
 
 @testset "DummyBackend construction" begin
@@ -45,19 +46,24 @@ end
     index_map = Dict(ids[1] => 1, ids[2] => 2)
 
     # check that construction works and the values aren't modified
-    th = TensorHandle{DummyBackend}(tensor, index_map)
+    th = TensorHandle{DummyBackend, typeof(tensor), Int}(tensor, index_map)
     @test th.tensor === tensor
     @test th.index_map === index_map
 end
 
-@testset "unimplemented contract" begin
+@testset "unimplemented functions" begin
     struct DummyBackend <: AbstractBackend end
 
-    th1 = TensorHandle{DummyBackend}(rand(2,2), Dict())
-    th2 = TensorHandle{DummyBackend}(rand(2,2), Dict())
-    cs = ContractionSpec(())
+    arr1 = rand(2, 2)
+    arr2 = rand(2, 2)
+    th1 = TensorHandle{DummyBackend, typeof(arr1), Int}(arr1, Dict())
+    th2 = TensorHandle{DummyBackend, typeof(arr2), Int}(arr2, Dict())
+    cs = ContractionSpec([])
     
     # check that if contract isn't implemented for an AbstractBackend subtype, it errors
     @test_throws "DummyBackend" contract(th1, th2, cs)
+
+    # check that if trace isn't implemented it errors
+    @test_throws "DummyBackend" trace(th1, cs)
 end
 
