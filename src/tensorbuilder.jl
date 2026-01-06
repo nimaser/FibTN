@@ -267,7 +267,7 @@ function make_tensor(type::TensorType, vinds::Vector{Index}, pinds::Vector{Index
         return make_StringTripletVector(vinds, 1)
     end
     if type == PassthroughStringTripletVector
-        return make_StringTripletVector(vinds, 1) + make_StringTripletVector(vinds, 3)
+        return make_StringTripletVector(vinds, 1) + √qdim(FibonacciAnyon(:τ)) * make_StringTripletVector(vinds, 3)
     end
     if type == StringTripletReflector
         return make_StringTripletReflector(vinds)
