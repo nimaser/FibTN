@@ -406,7 +406,7 @@ function tensor2states(T::ITensor)
 
     # get nonzero entries/states
     Tarr = array(T)
-    isapproxzero(x) = isapprox(x, 0, atol=eps(typeof(x)))
+    isapproxzero(x) = isapprox(x, 0, atol=2*eps(typeof(x)))
     nzidxs = findall(!isapproxzero, Tarr) # each entry describes a state in terms of its pind values
 
     # get mapping from pind to pval for a specific state s (ie entry in nzidxs)
