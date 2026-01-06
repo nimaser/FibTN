@@ -29,9 +29,11 @@ end
 if mode == :D
     gscalc = deserialize(pwd() * "/out/case$(case)")
 
-    displayrsg(gscalc.rsg, gscalc.l)
-    displayig(gscalc.ig, gscalc.l)
-    displayqg(gscalc.qg, gscalc.l)
+    if printing == :V
+        displayrsg(gscalc.rsg, gscalc.l)
+        displayig(gscalc.ig, gscalc.l)
+        displayqg(gscalc.qg, gscalc.l)
+    end
     displays(gscalc.s, gscalc.qg, gscalc.l)
 else
     # get the rsg and display information
@@ -77,9 +79,11 @@ else
     end
 
     if mode == :V
-        displayrsg(gscalc.rsg, gscalc.l)
-        displayig(gscalc.ig, gscalc.l)
-        displayqg(gscalc.qg, gscalc.l)
+        if printing == :V
+            displayrsg(gscalc.rsg, gscalc.l)
+            displayig(gscalc.ig, gscalc.l)
+            displayqg(gscalc.qg, gscalc.l)
+        end
         displays(gscalc.s, gscalc.qg, gscalc.l)
     end
 end
