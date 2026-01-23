@@ -44,6 +44,24 @@ struct TensorHandle{B <: AbstractBackend, T, I}
     index_map::Dict{IndexData, I}
 end
 
+function validate_contraction(cs::ContractionSpec, th1::TensorHandle, th2::TensorHandle)
+    for index in cs.indices
+        if !haskey(th1.index_map, index) && !haskey(th2.index_map, index)
+	    error("contraction index $index not in either TensorHandle's index map")
+	end
+	# TODO should I check for if the same index is present in both? I feel like that's not this code's job
+	# per se, and I can just leave it as undefined behavior
+    end
+end
+
+function validate_trace(cs::ContractionSpec, th::TensorHandle)
+    for index in cs.indices
+	if !haskey(th.index_map, index)
+            error("contraction index $index not present in TensorHandle's index map")
+	end
+    end
+end
+
 function contract(::TensorHandle{B}, ::TensorHandle{B}, ::ContractionSpec) where {B <: AbstractBackend}
     error("contract not implemented for backend $(B)")
 end
