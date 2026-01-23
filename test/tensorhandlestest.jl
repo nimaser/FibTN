@@ -1,37 +1,60 @@
 using FibTN.TensorHandles
 
-@testset "IndexData basics" begin
-    # check that construction works
-    id1 = IndexData(1, :a, VIRT, 1)
-    id2 = IndexData(1, :a, VIRT, 1)
-    id3 = IndexData(2, :a, VIRT, 1)
-    id4 = IndexData(1, :b, VIRT, 1)
-    id5 = IndexData(1, :a, PHYS, 1)
-    id6 = IndexData(1, :a, VIRT, 2)
-
-    # check that these things compare equal as expected
-    @test id1 == id2
-    @test id1 != id3
-    @test id1 != id4
-    @test id1 != id5
-    @test id1 != id6
-
-    # check that they're hashable and play nice with Dicts
-    d = Dict(id1 => :testval)
-    @test d[id2] == :testval
+@testset "IndexLabel basics" begin
+    # check construction
+    a1 = IndexLabel(1, :a)
+    a2 = IndexLabel(2, :a)
+    b1 = IndexLabel(1, :b)
+    
+    a1_2 = IndexLabel(1, :a)
+    
+    # check equality comparisons
+    @test a1 != a2
+    @test a1 != b1
+    @test a1 == a1_2
+    
+    # check that they are hashable
+    d = Dict(a1 => :val)
+    @test d[a1]     = :val
+    @test d[a1_2]   = :val
 end
 
-@testset "ContractionSpec basics" begin
-    id1 = IndexData(1, :a, VIRT, 3)
-    id2 = IndexData(2, :a, VIRT, 3)
-    id3 = IndexData(1, :b, VIRT, 2)
-    id4 = IndexData(2, :c, VIRT, 2)
-    id5 = IndexData(2, :a, VIRT, 2)
+@testset "IndexData basics" begin
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+
+    # check construction
+    ida1_v_1 = IndexData(a1, VIRT, 1)
+    idb1_v_1 = IndexData(b1, VIRT, 1)
+    ida1_p_1 = IndexData(a1, PHYS, 1)
+    ida1_v_2 = IndexData(a1, VIRT, 2)
     
-    # check that construction works and dimension constraints are checked
-    ContractionSpec([id1=>id2, id3=>id4])
-    @test_throws "dimension mismatch" ContractionSpec([id1=>id5, id3=>id4])
-    @test_throws "appears twice" ContractionSpec([id3=>id4, id3=>id5])
+    ida1_v_1_2 = IndexData(a1, VIRT, 1)
+
+    # check equality comparisons
+    @test ida1_v_1 != idb1_v_1
+    @test ida1_v_1 != ida1_p_1
+    @test ida1_v_1 != ida1_v_2
+    @test ida1_v_1 == ida1_v_1_2
+
+    # check that they're hashable
+    d = Dict(ida1_v_1 => :val)
+    @test d[ida1_v_1]   = :val
+    @test d[ida1_v_1_2] = :val
+end
+
+@testset "IndexPair basics" begin
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    ida1_v_1 = IndexData(a1, VIRT, 1)
+    idb1_v_1 = IndexData(b1, VIRT, 1)
+    idb1_v_2 = IndexData(b1, VIRT, 2)
+    ida1_v_1_2 = IndexData(a1, VIRT, 1)
+    
+    # check construction
+    @test_throws "dimensions" IndexPair(ida1_v_1, idb1_v_2)
+    @test_throws "labels" IndexPair(ida1_v_1, ida1_v_1_2)
+    ip = IndexPair(ida1_v_1, idb1_v_1)
 end
 
 @testset "DummyBackend construction" begin
@@ -39,11 +62,12 @@ end
     
     SIZE = 2
     tensor = rand(SIZE, SIZE)
-    ids = [
-        IndexData(1, :a, VIRT, SIZE),
-        IndexData(1, :b, VIRT, SIZE),
-    ]
-    index_map = Dict(ids[1] => 1, ids[2] => 2)
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    index_map = Dict(
+                     IndexData(a1, VIRT, SIZE) => 1,
+                     IndexData(b1, VIRT, SIZE) => 2,
+                    )
 
     # check that construction works and the values aren't modified
     th = TensorHandle{DummyBackend, typeof(tensor), Int}(tensor, index_map)
@@ -53,17 +77,22 @@ end
 
 @testset "unimplemented functions" begin
     struct DummyBackend <: AbstractBackend end
+    
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    ida1 = IndexData(a1, VIRT, 1)
+    idb1 = IndexData(b1, VIRT, 1)
+    ip = IndexPair(ida1, idb1)
 
     arr1 = rand(2, 2)
     arr2 = rand(2, 2)
     th1 = TensorHandle{DummyBackend, typeof(arr1), Int}(arr1, Dict())
     th2 = TensorHandle{DummyBackend, typeof(arr2), Int}(arr2, Dict())
-    cs = ContractionSpec([])
     
     # check that if contract isn't implemented for an AbstractBackend subtype, it errors
-    @test_throws "DummyBackend" contract(th1, th2, cs)
+    @test_throws "DummyBackend" contract(th1, th2, ip)
 
     # check that if trace isn't implemented it errors
-    @test_throws "DummyBackend" trace(th1, cs)
+    @test_throws "DummyBackend" trace(th1, ip)
 end
 

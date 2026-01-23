@@ -2,7 +2,7 @@ module TensorHandles
 
 export AbstractBackend
 export IndexLabel, VIRT, PHYS, IndexData, IndexPair
-export TensorHandle, ContractionSpec, contract, trace
+export TensorHandle, contract, trace
 
 abstract type AbstractBackend end
 
@@ -41,11 +41,11 @@ struct TensorHandle{B <: AbstractBackend, T, I}
     index_map::Dict{IndexData, I}
 end
 
-function contract(::TensorHandle{B}, ::TensorHandle{B}, ::ContractionSpec) where {B <: AbstractBackend}
+function contract(::TensorHandle{B}, ::TensorHandle{B}, ::IndexPair) where {B <: AbstractBackend}
     error("contract not implemented for backend $(B)")
 end
 
-function trace(::TensorHandle{B}, ::ContractionSpec) where {B <: AbstractBackend}
+function trace(::TensorHandle{B}, ::IndexPair) where {B <: AbstractBackend}
     error("trace not implemented for backend $(B)")
 end
 

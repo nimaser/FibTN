@@ -1,6 +1,6 @@
 module TensorNetworks
 
-export TensorNetwork
+export TensorNetwork, add_tensor!, add_contraction!
 
 using ..TensorHandles
 
