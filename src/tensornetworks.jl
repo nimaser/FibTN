@@ -4,46 +4,40 @@ export TensorNetwork
 
 using ..TensorHandles
 
-struct TensorNetwork
-    tensorhandless::Vector{TensorHandle}
-    indexcontractions::Vector{IndexContraction}
-    lookuptable::Dict{IndexData, TensorHandle}
-    TensorNetwork(ths::Vector{TensorHandle}, ics::Vector{IndexContraction}) = begin
-        
+mutable struct TensorNetwork{B <: AbstractBackend}
+    tensors::Vector{TensorHandle{B}}
+    contractions::Vector{IndexPair}
+    tensor_with_index::Dict{IndexLabel, TensorHandle{B}}
+    index_with_label::Dict{IndexLabel, IndexData}
+    _index_use_count::Dict{IndexLabel, UInt}
+    TensorNetwork{B}() where B <: AbstractBackend = new(Vector(), Vector(), Dict(), Dict(), Dict())
+end
+
+function add_tensor!(tn::TensorNetwork{B}, th::TensorHandle{B})
+    # check that all indices are unique to this network
+    for idxdat in keys(th.index_map)
+        if haskey(tn.tensor_with_index, idxdat.label) error("index $idxdat already in tensor network") end
+    end
+    # add the tensor and its indices to the bookkeeping datastructures
+    push!(tn.tensors, th)
+    for idxdat in keys(th.index_map)
+        tn.tensor_with_index[idxdat.label] = th
+        tn.index_with_label[idxdat.label] = idxdat
+        _index_use_count[idxdat.label] = 1
     end
 end
 
-# IndexLabel
-# - group::Int
-# - port::Symbol
-
-# IndexLevel
-# - VIRT or PHYS
-
-# IndexData
-# - label::IndexLabel
-# - dim::UInt
-# - type::IndexLevel
-
-# IndexPair
-# - indices::Pair{IndexData}
-# validation: must have different labels
-# validation: must have matching dims
-# validation: must have matching types
-
-# TensorHandle{B <: AbstractBackend, T, I}
-# - tensor::T
-# - index_map::Dict{IndexData, I}
-
-# TensorNetwork{B <: AbstractBackend}
-# - tensorhandles::Vector{TensorHandle{B}}
-# - contractions::Vector{IndexPair}
-# - tensor_with_index::Dict{IndexData, TensorHandle{B}}
-# - index_with_label::Dict{IndexLabel, IndexData}
-# validation: every PHYS IndexData must appear exactly once in a th
-# validation: every VIRT IndexData must appear exactly once in a th and once in an ip
-
-
-
+function add_contraction!(tn::TensorNetwork{B}, ip::IndexPair)
+    # check that indices are present
+    if !haskey(tn._index_use_count, ip.a.label) error("index $(ip.a) not found in network") end
+    if !haskey(tn._index_use_count, ip.b.label) error("index $(ip.b) not found in network") end
+    # check that indices have not already been contracted
+    if tn._index_use_count[ip.a.label] > 1 error("index $(ip.a) has already been contracted") end
+    if tn._index_use_count[ip.b.label] > 1 error("index $(ip.b) has already been contracted") end
+    # add index pair and adjust bookkeeping
+    push!(tn.contractions, ip)
+    tn._index_use_count[ip.a.label] += 1
+    tn._index_use_count[ip.b.label] += 1
+end
 
 end # module TensorNetworks

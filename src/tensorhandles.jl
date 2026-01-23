@@ -1,65 +1,44 @@
 module TensorHandles
 
 export AbstractBackend
-export VIRT, PHYS, IndexData
+export IndexLabel, VIRT, PHYS, IndexData, IndexPair
 export TensorHandle, ContractionSpec, contract, trace
 
 abstract type AbstractBackend end
 
+### Index ###
+
+struct IndexLabel
+    group::Int
+    port::Symbol
+end
+
 @enum IndexLevel VIRT PHYS
 
 struct IndexData
-    tensor_id::Int
-    name::Symbol
+    label::IndexLabel
     level::IndexLevel
-    dim::Int
+    dim::UInt
 end
 
-struct ContractionSpec
-    pairs::Vector{Pair{IndexData, IndexData}}
-    indices::Set{IndexData}
-    ContractionSpec(pairs) = begin
-        indices = Set()
-        for p in pairs
-            # check for dimension mismatch
-            if p.first.dim != p.second.dim
-                error("dimension mismatch for indices $(p.first) and $(p.second)")
-            end
-            # check that indices each appear only once
-            if p.first ∈ indices
-                error("index $(p.first) appears twice")
-            end
-            if p.second ∈ indices
-                error("index $(p.second) appears twice")
-            end
-            push!(indices, p.first)
-            push!(indices, p.second)
-        end
-        new(pairs, indices)
+struct IndexPair
+    a::IndexData
+    b::IndexData
+    function IndexPair(a, b)
+        # check invariants about contracted indices
+        if a.dim != b.dim error("dimensions of contracted indices must match") end
+        if a.label == b.label error("labels of contracted indices mustn't match") end
+        # enforce ordering by group number to simplify hashing and prevent duplicates
+        if a.label.group > b.label.group a, b = b, a end
+        new(a, b)
     end
 end
+
+### Tensor ###
 
 struct TensorHandle{B <: AbstractBackend, T, I}
     tensor::T
     index_map::Dict{IndexData, I}
-end
-
-function validate_contraction(cs::ContractionSpec, th1::TensorHandle, th2::TensorHandle)
-    for index in cs.indices
-        if !haskey(th1.index_map, index) && !haskey(th2.index_map, index)
-	    error("contraction index $index not in either TensorHandle's index map")
-	end
-	# TODO should I check for if the same index is present in both? I feel like that's not this code's job
-	# per se, and I can just leave it as undefined behavior
-    end
-end
-
-function validate_trace(cs::ContractionSpec, th::TensorHandle)
-    for index in cs.indices
-	if !haskey(th.index_map, index)
-            error("contraction index $index not present in TensorHandle's index map")
-	end
-    end
 end
 
 function contract(::TensorHandle{B}, ::TensorHandle{B}, ::ContractionSpec) where {B <: AbstractBackend}
