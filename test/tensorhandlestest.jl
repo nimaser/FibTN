@@ -5,6 +5,7 @@ using FibTN.TensorHandles
     a1 = IndexLabel(1, :a)
     a2 = IndexLabel(2, :a)
     b1 = IndexLabel(1, :b)
+    b2 = IndexLabel(2, :b)
     
     a1_2 = IndexLabel(1, :a)
     
@@ -13,10 +14,13 @@ using FibTN.TensorHandles
     @test a1 != b1
     @test a1 == a1_2
     
+    # check ordering
+    @test a1 < b1 < a2 < b2
+    
     # check that they are hashable
     d = Dict(a1 => :val)
-    @test d[a1]     = :val
-    @test d[a1_2]   = :val
+    @test d[a1]     == :val
+    @test d[a1_2]   == :val
 end
 
 @testset "IndexData basics" begin
@@ -39,8 +43,8 @@ end
 
     # check that they're hashable
     d = Dict(ida1_v_1 => :val)
-    @test d[ida1_v_1]   = :val
-    @test d[ida1_v_1_2] = :val
+    @test d[ida1_v_1]   == :val
+    @test d[ida1_v_1_2] == :val
 end
 
 @testset "IndexPair basics" begin
@@ -55,6 +59,7 @@ end
     @test_throws "dimensions" IndexPair(ida1_v_1, idb1_v_2)
     @test_throws "labels" IndexPair(ida1_v_1, ida1_v_1_2)
     ip = IndexPair(ida1_v_1, idb1_v_1)
+    @test ip == IndexPair(idb1_v_1, ida1_v_1) # check no duplicates
 end
 
 @testset "DummyBackend construction" begin

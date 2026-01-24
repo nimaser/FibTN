@@ -13,6 +13,9 @@ struct IndexLabel
     port::Symbol
 end
 
+# so that pairs of IndexLabels are ordered
+Base.isless(a::IndexLabel, b::IndexLabel) = a.group < b.group || (a.group == b.group && a.port < b.port)
+
 @enum IndexLevel VIRT PHYS
 
 struct IndexData
@@ -28,8 +31,8 @@ struct IndexPair
         # check invariants about contracted indices
         if a.dim != b.dim error("dimensions of contracted indices must match") end
         if a.label == b.label error("labels of contracted indices mustn't match") end
-        # enforce ordering by group number to simplify hashing and prevent duplicates
-        if a.label.group > b.label.group a, b = b, a end
+        # enforce ordering to prevent duplicates
+        if b.label < a.label a, b = b, a end
         new(a, b)
     end
 end

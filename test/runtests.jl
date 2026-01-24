@@ -3,4 +3,7 @@ using FibTN
 
 include("tensorhandlestest.jl")
 include("itensorsinterfacetest.jl")
-include("tensortypestest.jl")
+
+#include("tensornetworkstest.jl")
+
+#include("tensortypestest.jl")

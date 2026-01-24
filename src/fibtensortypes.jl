@@ -1,22 +1,29 @@
-module TensorTypes
+module FibTensorTypes
 
-export AbstractTensorType
+# Fibonacci input category data; dim and N, F, R symbols
+using TensorKitSectors
+const qdim = TensorKitSectors.dim # to avoid name conflict
+
+export AbstractFibTensorType
 export Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
 export index_data, tensor_data
 
+export Gsymbol, ijk2p, p2ijk, abc2ijkλμνp
+include("fibtensortypesutils.jl")
+
 ### TENSOR TYPES ###
 
-abstract type AbstractTensorType end
+abstract type AbstractFibTensorType end
 
-struct Reflector        <: AbstractTensorType end
-struct LoopAmplitude    <: AbstractTensorType end
-struct Vertex           <: AbstractTensorType end
-struct Tail             <: AbstractTensorType end
-struct Crossing         <: AbstractTensorType end
-struct Fusion           <: AbstractTensorType end
-struct End              <: AbstractTensorType end
-struct Excitation       <: AbstractTensorType end
-struct DoubledFusion    <: AbstractTensorType end
+struct Reflector        <: AbstractFibTensorType end
+struct LoopAmplitude    <: AbstractFibTensorType end
+struct Vertex           <: AbstractFibTensorType end
+struct Tail             <: AbstractFibTensorType end
+struct Crossing         <: AbstractFibTensorType end
+struct Fusion           <: AbstractFibTensorType end
+struct End              <: AbstractFibTensorType end
+struct Excitation       <: AbstractFibTensorType end
+struct DoubledFusion    <: AbstractFibTensorType end
 
 ### TENSOR INDEX DATA (OMITTING TENSOR ID) ###
 
@@ -80,15 +87,33 @@ function tensor_data(::Type{T}) where {T <: AbstractTensorType}
 end
 
 function generate_tensor_data(::Type{Reflector})
-    # TODO
+    [1 0 0 0 0;
+     0 0 0 1 0;
+     0 0 1 0 0;
+     0 1 0 0 0;
+     0 0 0 0 1]
 end
 
 function generate_tensor_data(::Type{LoopAmplitude})
-    # TODO
+    [1 0 0 0 0;
+     0 1 0 0 0;
+     0 0 \phi 0 0;
+     0 0 0 \phi 0;
+     0 0 0 0 \phi]
 end
 
 function generate_tensor_data(::Type{Vertex})
-    # TODO
+    GSTriangle_data = zeros(Float64, 5, 5, 5, 5)
+    for a in 1:5
+        for b in 1:5
+            for c in 1:5
+                local i, j, k, λ, μ, ν, p
+                try i, j, k, λ, μ, ν, p = abc2etc(a, b, c) catch; continue end
+                GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
+            end
+        end
+    end
+    GSTriangle_data
 end
 
 function generate_tensor_data(::Type{Tail})
