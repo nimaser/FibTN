@@ -8,6 +8,7 @@ mutable struct TensorNetwork{B <: AbstractBackend}
     tensors::Vector{TensorHandle{B}}
     contractions::Vector{IndexPair}
     tensor_with_index::Dict{IndexLabel, TensorHandle{B}}
+    contraction_with_index::Dict{IndexLabel, IndexPair}
     index_with_label::Dict{IndexLabel, IndexData}
     _index_use_count::Dict{IndexLabel, UInt}
     TensorNetwork{B}() where B <: AbstractBackend = new(Vector(), Vector(), Dict(), Dict(), Dict())
@@ -23,7 +24,7 @@ function add_tensor!(tn::TensorNetwork{B}, th::TensorHandle{B})
     for idxdat in keys(th.index_map)
         tn.tensor_with_index[idxdat.label] = th
         tn.index_with_label[idxdat.label] = idxdat
-        _index_use_count[idxdat.label] = 1
+        tn._index_use_count[idxdat.label] = 1
     end
 end
 
@@ -36,6 +37,8 @@ function add_contraction!(tn::TensorNetwork{B}, ip::IndexPair)
     if tn._index_use_count[ip.b.label] > 1 error("index $(ip.b) has already been contracted") end
     # add index pair and adjust bookkeeping
     push!(tn.contractions, ip)
+    tn.contraction_with_index[ip.a.label] = ip
+    tn.contraction_with_index[ip.b.label] = ip
     tn._index_use_count[ip.a.label] += 1
     tn._index_use_count[ip.b.label] += 1
 end
