@@ -1,3 +1,5 @@
+using GLMakie
+
 struct TensorLabel
     group::Int
     indices::Vector{IndexLabel}
@@ -58,6 +60,16 @@ struct FibTensorNetworkLayoutSpec
 end
 
 function visualize(ftn::FibTensorNetwork, ftnls::FibTensorNetworkLayoutSpec)
+    # put positions and colors into arrays
+    i, x, y, c = Vector{Int}(), Vector{Float64}(), Vector{Float64}(), Vector{Symbol}()
+    for (ky,vl) in ftnls.positions
+        push!(i, ky)
+        push!(x, vl[1])
+        push!(y, vl[2])
+        if haskey(ftnls.colors, ky) push!(c, ftnls.colors[ky]) end
+    end
+    
+    #
     # for each tensor in tn, plot a node in a graph
     # for each contraction in tn, plot an edge between nodes
     # use ls to specify how to visualize each one
