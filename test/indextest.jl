@@ -28,9 +28,14 @@ end
     # errors on identical indices
     @test_throws "labels" IndexPair(a1, a1_2)
     
-    # ordering enforced
+    # IndexPair construction, with ordering enforced
     ip = IndexPair(a1, b1)
     pi = IndexPair(b1, a1)
     @test ip.a == pi.a
     @test ip.b == pi.b
+    
+    # check that they are hashable
+    d = Dict(ip => :val)
+    @test d[ip] == :val
+    @test d[pi] == :val
 end

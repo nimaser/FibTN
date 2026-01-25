@@ -1,8 +1,9 @@
 struct QubitLattice
-    # TODO
     adjacent_qubits::Dict{Int, Vector{int}}
     adjacent_tensors::Dict{Int, NTuple{2, Int}}
-    QubitLattice() = new(Dict(), Dict())
+    function QubitLattice(ftn::FibTensorNetwork)
+        
+    end
 end
 
 struct QubitLatticeLayoutSpec
