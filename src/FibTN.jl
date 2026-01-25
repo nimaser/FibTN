@@ -27,7 +27,7 @@ struct TensorHandle
     indices::Vector{IndexLabel}
     data::SparseArray
     function TensorHandle(group, indices, data)
-        if length(indices) != ndims(data) error("number of indices differs from number of array dims") end
+        if length(indices) != ndims(data) error("number of indices differs from array ndims") end
         for idx in indices
             if idx.group != group error("tensorhandle group must be the same as each of its indices") end
         end
@@ -36,7 +36,7 @@ struct TensorHandle
 end
 
 struct TensorNetwork
-    tensors::Vector{TensorHandle}
+    tensors::Dict{Int, TensorHandle}
     contractions::Vector{IndexPair}
     tensor_with_index::Dict{IndexLabel, TensorHandle}
     contraction_with_index::Dict{IndexLabel, IndexPair}
@@ -55,7 +55,7 @@ function add_tensor!(tn::TensorNetwork, th::TensorHandle; qubit_index_map=Dict{I
         if k.group != th.group error("got qubit index map for index not associated with this tensor") end
     end
     # add tensor and update bookkeeping
-    push!(tn.tensors, th)
+    push!(tn.tensors, th.group, th)
     for idx in th.indices
         tn.tensor_with_index[idx] = th
         tn._index_use_count[idx] = 1
@@ -90,26 +90,34 @@ function visualize(tn::TensorNetwork, tnls::TensorNetworkLayoutSpec)
 end
 
 struct QubitLattice
-    
-    states::Dict{Int, Bool}
-    QubitLattice() = new(Dict())
+    adjacent_qubits::Dict{Int, Vector{int}}
+    adjacent_tensors::Dict{Int, NTuple{2, Int}}
+    QubitLattice() = new(Dict(), Dict())
 end
 
 struct QubitLatticeLayoutSpec
-    positions::Dict{Int, Tuple{Int, Int}}
+    node_positions::Dict{Int, Tuple{Int, Int}}
+    node_colors::Dict{Int, Symbol}
+    edge_colors::Dict{Int, Symbol}
 end
 
 function visualize(ql::QubitLattice, qlls::QubitLatticeLayoutSpec)
-    # plot the lattice connectivity graph in ql, using qlls for the styling
-    # change the color of the graph edges to denote the states |0> and |1>
+    # plot the lattice connectivity graph in ql, using qlls for the styling and to
+    # change the color of the graph edges to denote the qubit states |0> and |1>
 end
 
-function materialize(tn::TensorNetwork)
-    out = Dict{Int, SparseArray}
-    for tensor in tn.tensors
-        out[tensor.group] = SparseArray(tensor_data(get_type(tensor)))
-    end
-    out
+function get_unused_group_number(tn::TensorNetwork)
+    i = 1
+    while true
+        
+        
+
+function contract!(tn::TensorNetwork, group1::Int, group2::Int)
+    
+end
+
+function contract!(tn::TensorNetwork, ip::IndexPair)
+    
 end
 
 f I wanted to do boundary MPS, I'd want to create some additional datastructure to represent a tensor network in the process of being contracted, where this one actually contains the data for each tensor in each node struct. This is because there's no 'type' to define the composite results of contracting several tensors to get a grid shape.
