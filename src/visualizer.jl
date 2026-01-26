@@ -23,15 +23,22 @@ function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
 end
 
 struct QubitLatticeDisplaySpec
-    node_positions::Dict{Int, Tuple{Int, Int}}
-    edge_colors::Dict{Int, Symbol}
+    index_positions::Dict{IndexLabel, Tuple{Float64, Float64}}
+    qubit_colors::Dict{Int, Symbol}
 end
 
 function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
-    pos = [qlds.node_positions[k] for k in sort!(collect(keys(qlds.node_positions)))]
-    graphplot!(ax, ql.graph, layout=pos, )
-    # plot the lattice connectivity graph in ql, using qlls for the styling and to
-    # change the color of the graph edges to denote the qubit states |0> and |1>
+    # convert index position dict to node position array
+    node_positions = Vector{Tuple{Float64, Float64}}(undef, nv(ql.graph))
+    for (idx, node_num) in ql._node_from_index
+        node_positions[node_num] = qlds.index_positions[idx]
+    end
+    # convert qubit colors to edge colors
+    edge_colors = Dict{SimpleEdge, Symbol}()
+    for (qubit, edge) in ql._edge_from_qubit
+        edge_colors[edge] = haskey(qlds.qubit_colors, qubit) ? qlds.qubit_colors[qubit] : :gray
+    end
+    graphplot!(ax, ql.graph, layout=node_positions, edge_color=[edge_colors[e] for e in edges(ql.graph)])
 end
 
 end # module Visualizer

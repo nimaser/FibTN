@@ -2,6 +2,7 @@ module QubitLattices
 
 using Graphs
 using ..Indices
+using ..IndexTriplets
 
 export QubitLattice, add_index!
 
@@ -38,5 +39,7 @@ function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
         end
     end
 end
+
+# TODO function to get qubit to value mapping
 
 end # module QubitLattices
