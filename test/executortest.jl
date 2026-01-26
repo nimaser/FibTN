@@ -57,7 +57,7 @@ end
     @test length(en.tensor_from_id) == 1
     @test en.next_id == 4
 
-    et = first(values(en.tensor_from_id))
+    et = execute_step!(en, FetchResult())
     @test et.id == 3
     @test et.groups == Set([1, 2])
     @test et.indices == [i, k]
@@ -104,7 +104,7 @@ end
     @test length(en.tensor_from_id) == 1
     @test en.next_id == 6
     
-    et = first(values(en.tensor_from_id))
+    et = execute_step!(en, FetchResult())
     @test et.id == 5
     @test et.groups == Set([1, 2, 3])
     @test et.indices == [i, l]
