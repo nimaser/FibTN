@@ -30,7 +30,7 @@ end
     
     @test ql._node_from_index[a1] == 1
     
-    # check qubit registration
+    # check qubit -> index mapping
     @test ql.indices_from_qubit[1] == [a1]
     @test ql.indices_from_qubit[2] == [a1]
     @test ql.indices_from_qubit[3] == [a1]
@@ -63,13 +63,16 @@ end
     @test ql._node_from_index[a1] == 1
     @test ql._node_from_index[b2] == 2
     
+    # check edges are correct
     @test has_edge(ql.graph, 1, 2)
-    @test ql._edge_from_qubit[3] == SimpleEdge(1, 2)
     
-    # check qubit registration
+    # check qubit -> edge mapping
+    @test ql._edge_from_qubit[3] == Edge(1, 2) || ql._edge_from_qubit[3] == Edge(2, 1)
+    
+    # check qubit -> index mapping
     @test Set(ql.indices_from_qubit[3]) == Set([a1, b2])
-    @test ql.indices_from_qubit[1] == a1
-    @test ql.indices_from_qubit[5] == b2
+    @test Set(ql.indices_from_qubit[1]) == Set([a1])
+    @test Set(ql.indices_from_qubit[5]) == Set([b2])
     
     # check unpaired
     @test Set(ql._unpaired_qubits) == Set([1, 2, 4, 5])
@@ -97,13 +100,20 @@ end
     @test nv(ql.graph) == 3
     @test ne(ql.graph) == 3
     
+    # check edges are correct
     @test has_edge(ql.graph, 1, 2)
     @test has_edge(ql.graph, 2, 3)
     @test has_edge(ql.graph, 3, 1)
     
-    @test ql._edge_from_qubit[2] == SimpleEdge(1, 2)
-    @test ql._edge_from_qubit[3] == SimpleEdge(2, 3)
-    @test ql._edge_from_qubit[1] == SimpleEdge(1, 3)
+    # check qubit -> edge mapping
+    @test ql._edge_from_qubit[2] == Edge(1, 2) || ql._edge_from_qubit[2] == Edge(2, 1)
+    @test ql._edge_from_qubit[3] == Edge(2, 3) || ql._edge_from_qubit[3] == Edge(3, 2)
+    @test ql._edge_from_qubit[1] == Edge(1, 3) || ql._edge_from_qubit[1] == Edge(3, 1)
+    
+    # check qubit -> index mapping
+    @test Set(ql.indices_from_qubit[2]) == Set([i1, i2])
+    @test Set(ql.indices_from_qubit[3]) == Set([i2, i3])
+    @test Set(ql.indices_from_qubit[1]) == Set([i3, i1])
     
     # check unpaired
     @test Set(ql._unpaired_qubits) == Set([4, 5, 6])

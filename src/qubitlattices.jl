@@ -10,7 +10,7 @@ struct QubitLattice
     qubits_from_index::Dict{IndexLabel, Vector{Int}}
     _node_from_index::Dict{IndexLabel, Int}
     indices_from_qubit::Dict{Int, Vector{IndexLabel}}
-    _edge_from_qubit::Dict{Int, SimpleEdge}
+    _edge_from_qubit::Dict{Int, Edge}
     _unpaired_qubits::Vector{Int}
     graph::SimpleGraph
     QubitLattice() = new(Dict(), Dict(), Dict(), Dict(), [], SimpleGraph())
@@ -18,7 +18,7 @@ end
 
 function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
     # check that there are no duplicate qubits or indices
-    if haskey(qubits_from_index, i) error("index $i already mapped to qubits") end
+    if haskey(ql.qubits_from_index, i) error("index $i already mapped to qubits") end
     if length(Set(qubits)) != length(qubits) error("duplicate qubits provided") end
 
     # register qubits to index
@@ -33,7 +33,7 @@ function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
             # we are assuming that each qubit can be matched to at most two indices
             otherindexnode = ql._node_from_index[ql.indices_from_qubit[qubit][1]]
             add_edge!(ql.graph, nv(ql.graph), otherindexnode)
-            _edge_from_qubit[qubit] = SimpleEdge(nv(ql.graph), otherindexnode)
+            ql._edge_from_qubit[qubit] = Edge(nv(ql.graph), otherindexnode)
             push!(ql.indices_from_qubit[qubit], i)
             filter!(!=(qubit), ql._unpaired_qubits)
         else

@@ -7,7 +7,7 @@ export TensorLabel, TensorNetwork, add_tensor!, add_contraction!
 struct TensorLabel
     group::Int
     indices::Vector{IndexLabel}
-    function TensorLabel(group, indices, data)
+    function TensorLabel(group, indices)
         for idx in indices
             if idx.group != group error("TensorLabel group must be the same as each of its indices") end
         end

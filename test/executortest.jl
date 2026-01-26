@@ -2,8 +2,7 @@ using FibTN.Indices
 using FibTN.TensorNetworks
 using FibTN.Executor
 
-using TensorOperations
-using SparseArrays
+using SparseArrayKit, TensorOperations
 
 @testset "ExecNetwork basics" begin
     a1 = IndexLabel(1, :a)
@@ -24,7 +23,7 @@ using SparseArrays
     @test length(en.tensor_from_id) == 2
     @test en.next_id == 3
 
-    et1, et2 = values(en.tensor_from_id)
+    et1, et2 = en.tensor_from_id[1], en.tensor_from_id[2]
     @test et1.indices == [a1, b1]
     @test et2.indices == [a2, b2]
     @test et1.data == A1
@@ -54,7 +53,7 @@ end
     @test en.next_id == 3
 
     # execute contraction
-    execute_step!(en, IndexPair(j1, j2))
+    execute_step!(en, Contraction(IndexPair(j1, j2)))
     @test length(en.tensor_from_id) == 1
     @test en.next_id == 4
 
@@ -64,8 +63,7 @@ end
     @test et.indices == [i, k]
     
     # check calculation via @tensor
-    C = zeros(2,2)
-    @tensor C[a,c] = A[a,b] * B[b,c]
+    @tensor C[a,c] := A[a,b] * B[b,c]
     @test Array(et.data) ≈ C
 end
 
@@ -98,11 +96,11 @@ end
     @test length(en.tensor_from_id) == 3
     @test en.next_id == 4
 
-    execute_step!(en, IndexPair(j1, j2))
+    execute_step!(en, Contraction(IndexPair(j1, j2)))
     @test length(en.tensor_from_id) == 2
     @test en.next_id == 5
     
-    execute_step!(en, IndexPair(k1, k2))
+    execute_step!(en, Contraction(IndexPair(k1, k2)))
     @test length(en.tensor_from_id) == 1
     @test en.next_id == 6
     
@@ -111,7 +109,6 @@ end
     @test et.groups == Set([1, 2, 3])
     @test et.indices == [i, l]
 
-    D = zeros(2,2)
-    @tensor D[a,d] = A[a,b] * B[b,c] * C[c,d]
+    @tensor D[a,d] := A[a,b] * B[b,c] * C[c,d]
     @test Array(et.data) ≈ D
 end

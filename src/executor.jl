@@ -3,6 +3,8 @@ module Executor
 using ..Indices
 using ..TensorNetworks
 
+using SparseArrayKit, TensorOperations
+
 export ExecTensor, ExecNetwork, ExecStep, execute_step!
 export Contraction, QRDecomp
 
@@ -21,10 +23,10 @@ mutable struct ExecNetwork
     tensor_from_id::Dict{Int, ExecTensor}
     id_from_index::Dict{IndexLabel, Int}
     next_id::Int
-    function ExecNetwork(tn::TensorNetwork, tensordata_from_group::Dict{Int, SparseArray})
+    function ExecNetwork(tn::TensorNetwork, tensordata_from_group::Dict{Int, <: SparseArray})
         next_id = 1
-        tensor_from_id = Dict{Int, ExecTensor}
-        id_from_index = Dict{IndexLabel, Int}
+        tensor_from_id = Dict{Int, ExecTensor}()
+        id_from_index = Dict{IndexLabel, Int}()
         for tl in tn.tensors
             et = ExecTensor(next_id, Set(tl.group), copy(tl.indices), tensordata_from_group[tl.group])
             tensor_from_id[next_id] = et
@@ -35,9 +37,13 @@ mutable struct ExecNetwork
     end
 end
             
-abstract type ExecStep
+abstract type ExecStep end
 
-const Contraction <: ExecStep = IndexPair
+struct Contraction <: ExecStep
+    a::IndexLabel
+    b::IndexLabel
+    Contraction(ip::IndexPair) = new(ip.a, ip.b)
+end
 
 struct QRDecomp <: ExecStep
     # TODO

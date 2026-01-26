@@ -85,7 +85,7 @@ end
     b3 = IndexLabel(3, :b)
     c4 = IndexLabel(4, :c)
     
-    tl1 = TensorLabel(1, [c, a1, b1, c1])
+    tl1 = TensorLabel(1, [center1, a1, b1, c1])
     tl2 = TensorLabel(2, [a2])
     tl3 = TensorLabel(3, [b3])
     tl4 = TensorLabel(4, [c4])
@@ -103,5 +103,5 @@ end
     
     @test length(tn.contractions) == 3
     @test tn._index_use_count[a1] == 2
-    @test tn._index_use_count[c] == 1
+    @test tn._index_use_count[center1] == 1
 end
