@@ -6,7 +6,7 @@ using ..TensorNetworks
 using SparseArrayKit, TensorOperations
 
 export ExecTensor, ExecNetwork, ExecStep, execute_step!
-export Contraction, QRDecomp
+export Contraction, FetchResult, QRDecomp
 
 struct ExecTensor
     id::Int
@@ -44,6 +44,8 @@ struct Contraction <: ExecStep
     b::IndexLabel
     Contraction(ip::IndexPair) = new(ip.a, ip.b)
 end
+
+struct FetchResult <: ExecStep end
 
 struct QRDecomp <: ExecStep
     # TODO
@@ -90,6 +92,11 @@ function execute_step!(en::ExecNetwork, c::Contraction)
     # update overall id counter
     en.next_id += 1
     return nothing
+end
+
+function execute_step!(en::ExecNetwork, ::FetchResult)
+    if length(en.tensor_from_id) != 1 error("ExecNetwork not fully contracted") end
+    result_et = only(values(en.tensor_from_id))
 end
 
 function execute_step(en::ExecNetwork, qrd::QRDecomp)

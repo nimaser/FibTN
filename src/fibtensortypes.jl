@@ -1,6 +1,7 @@
 module FibTensorTypes
 
 using ..IndexTriplets
+using ..Indices
 
 # Fibonacci input category data; dim and N, F, R symbols
 using TensorKitSectors
@@ -8,7 +9,7 @@ const qdim = TensorKitSectors.dim # to avoid name conflict
 
 export AbstractFibTensorType
 export Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
-export index_data, tensor_data
+export index_labels, tensor_data
 
 ### UTILS ###
 
@@ -38,29 +39,31 @@ struct End              <: AbstractFibTensorType end
 struct Excitation       <: AbstractFibTensorType end
 struct DoubledFusion    <: AbstractFibTensorType end
 
-### TENSOR INDEX DATA (PORTS) ###
+### TENSOR INDEX DATA ###
 
-index_data(::Type{Reflector}) = (:a, :b)
+index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IndexLabel(group, p) for p in index_ports(T)]
 
-index_data(::Type{LoopAmplitude}) = (:a, :b)
+index_ports(::Type{Reflector}) = (:a, :b)
 
-index_data(::Type{Vertex}) = (:a, :b, :c, :q)
+index_ports(::Type{LoopAmplitude}) = (:a, :b)
 
-index_data(::Type{Tail}) = (:a, :b, :q)
+index_ports(::Type{Vertex}) = (:a, :b, :c, :q)
 
-index_data(::Type{Crossing}) = (:a, :b, :c, :d)
+index_ports(::Type{Tail}) = (:a, :b, :q)
 
-index_data(::Type{Fusion}) = (:a, :b, :c)
+index_ports(::Type{Crossing}) = (:a, :b, :c, :d)
 
-index_data(::Type{End}) = (
+index_ports(::Type{Fusion}) = (:a, :b, :c)
+
+index_ports(::Type{End}) = (
 #TODO
 )
 
-index_data(::Type{Excitation}) = (
+index_ports(::Type{Excitation}) = (
 #TODO
 )
 
-index_data(::Type{DoubledFusion}) = (
+index_ports(::Type{DoubledFusion}) = (
 #TODO
 )
 
