@@ -17,6 +17,10 @@ struct QubitLattice
 end
 
 function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
+    # check that there are no duplicate qubits or indices
+    if haskey(qubits_from_index, i) error("index $i already mapped to qubits") end
+    if length(Set(qubits)) != length(qubits) error("duplicate qubits provided") end
+
     # register qubits to index
     ql.qubits_from_index[i] = qubits
     # add index to graph
