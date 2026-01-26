@@ -21,7 +21,7 @@ struct TensorNetwork
     tensor_with_index::Dict{IndexLabel, TensorLabel}
     contraction_with_index::Dict{IndexLabel, IndexPair}
     _index_use_count::Dict{IndexLabel, UInt}
-    TensorNetwork() = new(Array(), Array(), Dict(), Dict())
+    TensorNetwork() = new([], [], Dict(), Dict(), Dict())
 end
 
 function add_tensor!(tn::TensorNetwork, tl::TensorLabel)
@@ -30,7 +30,7 @@ function add_tensor!(tn::TensorNetwork, tl::TensorLabel)
         if haskey(tn._index_use_count, idx) error("index $idx already in tensor network") end
     end
     # add tensor and update bookkeeping
-    push!(tn.tensors, tl.group, th)
+    push!(tn.tensors, tl)
     for idx in tl.indices
         tn.tensor_with_index[idx] = tl
         tn._index_use_count[idx] = 1

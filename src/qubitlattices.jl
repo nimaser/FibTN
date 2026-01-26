@@ -12,7 +12,7 @@ struct QubitLattice
     _edge_from_qubit::Dict{Int, SimpleEdge}
     _unpaired_qubits::Vector{Int}
     graph::SimpleGraph
-    QubitLattice() = new(Dict(), Dict(), Dict(), Dict(), Array(), SimpleGraph())
+    QubitLattice() = new(Dict(), Dict(), Dict(), Dict(), [], SimpleGraph())
 end
 
 function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
@@ -33,7 +33,7 @@ function add_index!(ql::QubitLattice, i::IndexLabel, qubits::Vector{Int})
             filter!(!=(qubit), ql._unpaired_qubits)
         else
             # this is the first index for this qubit
-            ql.indices_from_qubit = [i]
+            ql.indices_from_qubit[qubit] = [i]
             push!(ql._unpaired_qubits, qubit)
         end
     end

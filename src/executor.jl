@@ -46,57 +46,42 @@ end
 function execute_step!(en::ExecNetwork, c::Contraction)
     ida = en.id_from_index[c.a]
     idb = en.id_from_index[c.b]
-
     Ta = en.tensor_from_id[ida]
     Tb = en.tensor_from_id[idb]
-
     # find index positions
-    pa = findfirst(==(ia), Ta.indices)
-    pb = findfirst(==(ib), Tb.indices)
-
+    pa = findfirst(==(c.a), Ta.indices)
+    pb = findfirst(==(c.b), Tb.indices)
     # build index label lists for tensorcontract
     IA = collect(1:length(Ta.indices))
     IB = collect(1:length(Tb.indices))
-
     # assign same label to contracted indices
-    label = 0
-    IA[pa] = label
-    IB[pb] = label
-
+    IA[pa] = 0
+    IB[pb] = 0
     # perform contraction
     C = tensorcontract(
         Ta.data, IA, false,
         Tb.data, IB, false
     )
-
-    # new indices = uncontracted ones
+    # new indices are uncontracted ones
     new_indices = vcat(
         deleteat!(copy(Ta.indices), pa),
         deleteat!(copy(Tb.indices), pb)
     )
-
     # new tensor
     new_id = en.next_id
     new_groups = union(Ta.groups, Tb.groups)
-
     Tc = ExecTensor(new_id, new_groups, new_indices, C)
 
-    # update ExecNetwork
+    # remove old tensors
     delete!(en.tensor_from_id, ida)
     delete!(en.tensor_from_id, idb)
-
-    for idx in Ta.indices
-        delete!(en.id_from_index, idx)
-    end
-    for idx in Tb.indices
-        delete!(en.id_from_index, idx)
-    end
-
+    # remove old ids
+    for idx in Ta.indices delete!(en.id_from_index, idx) end
+    for idx in Tb.indices delete!(en.id_from_index, idx) end
+    # add new tensor and id
     en.tensor_from_id[new_id] = Tc
-    for idx in new_indices
-        en.id_from_index[idx] = new_id
-    end
-
+    for idx in new_indices en.id_from_index[idx] = new_id end
+    # update overall id counter
     en.next_id += 1
     return nothing
 end
