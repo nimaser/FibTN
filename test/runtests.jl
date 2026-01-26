@@ -3,9 +3,9 @@ using FibTN
 
 include("fibtensortypestest.jl")
 
-include("sparsearrayutils.jl")
+include("sparsearrayutilstest.jl")
 
-include("indextest.jl")
-include("fibtensornetworkstest.jl")
-include("executiontest.jl")
+include("indicestest.jl")
+include("tensornetworkstest.jl")
+include("executortest.jl")
 include("qubitlatticestest.jl")

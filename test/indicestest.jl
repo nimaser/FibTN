@@ -1,3 +1,5 @@
+using FibTN.Indices
+
 @testset "IndexLabel basics" begin
     # IndexLabel construction
     a1 = IndexLabel(1, :a)

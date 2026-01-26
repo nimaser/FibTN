@@ -1,3 +1,7 @@
+using FibTN.Indices
+using FibTN.TensorNetworks
+using FibTN.Executor
+
 using TensorOperations
 using SparseArrays
 
@@ -5,18 +9,18 @@ using SparseArrays
     a1 = IndexLabel(1, :a)
     b1 = IndexLabel(1, :b)
     a2 = IndexLabel(2, :a)
-    b2 = Indexlabel(2, :b)
+    b2 = IndexLabel(2, :b)
 
     tl1 = TensorLabel(1, [a1, b1])
     tl2 = TensorLabel(2, [a2, b2])
 
-    ftn = FibTensorNetwork()
-    add_tensor!(ftn, tl1)
-    add_tensor!(ftn, tl2)
+    tn = TensorNetwork()
+    add_tensor!(tn, tl1)
+    add_tensor!(tn, tl2)
 
     A1 = SparseArray([1.0 2.0; 3.0 4.0])
     A2 = SparseArray([5.0 6.0; 7.0 8.0])
-    en = ExecNetwork(ftn, Dict(1 => A1, 2 => A2))
+    en = ExecNetwork(tn, Dict(1 => A1, 2 => A2))
 
     @test length(en.tensor_from_id) == 2
     et1, et2 = values(en.tensor_from_id)
@@ -36,15 +40,15 @@ end
     tlA = TensorLabel(1, [i, j1])
     tlB = TensorLabel(2, [j2, k])
 
-    ftn = FibTensorNetwork()
-    add_tensor!(ftn, tlA)
-    add_tensor!(ftn, tlB)
-    add_contraction!(ftn, IndexPair(j1, j2))
+    tn = TensorNetwork()
+    add_tensor!(tn, tlA)
+    add_tensor!(tn, tlB)
+    add_contraction!(tn, IndexPair(j1, j2))
 
-    A = sparse_tensor([1.0 2.0; 3.0 4.0])
-    B = sparse_tensor([5.0 6.0; 7.0 8.0])
+    A = SparseArray([1.0 2.0; 3.0 4.0])
+    B = SparseArray([5.0 6.0; 7.0 8.0])
 
-    en = ExecNetwork(ftn, Dict(1 => A, 2 => B))
+    en = ExecNetwork(tn, Dict(1 => A, 2 => B))
 
     # Execute contraction
     execute_step!(en, IndexPair(j1, j2))
@@ -74,17 +78,17 @@ end
     tlB = TensorLabel(2, [j2, k1])
     tlC = TensorLabel(3, [k2, l])
 
-    ftn = FibTensorNetwork()
-    add_tensor!(ftn, tlA)
-    add_tensor!(ftn, tlB)
-    add_tensor!(ftn, tlC)
+    tn = TensorNetwork()
+    add_tensor!(tn, tlA)
+    add_tensor!(tn, tlB)
+    add_tensor!(tn, tlC)
 
-    add_contraction!(ftn, IndexPair(j1, j2))
-    add_contraction!(ftn, IndexPair(k1, k2))
+    add_contraction!(tn, IndexPair(j1, j2))
+    add_contraction!(tn, IndexPair(k1, k2))
 
-    A = sparse_tensor([1.0 2.0; 3.0 4.0])
-    B = sparse_tensor([5.0 6.0; 7.0 8.0])
-    C = sparse_tensor([9.0 0.0; 1.0 2.0])
+    A = SparseArray([1.0 2.0; 3.0 4.0])
+    B = SparseArray([5.0 6.0; 7.0 8.0])
+    C = SparseArray([9.0 0.0; 1.0 2.0])
 
     en = ExecNetwork(tn, Dict(1 => A, 2 => B, 3 => C))
 

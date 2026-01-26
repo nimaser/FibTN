@@ -12,7 +12,7 @@ Base.isless(a::IndexLabel, b::IndexLabel) = a.group < b.group || (a.group == b.g
 
 struct IndexPair
     a::IndexLabel
-    b::Indexlabel
+    b::IndexLabel
     function IndexPair(a, b)
         # check that indices aren't the same
         if a == b error("labels of contracted indices mustn't match") end
