@@ -9,6 +9,8 @@ using ..Indices
 using ..TensorNetworks
 using ..QubitLattices
 
+export TensorNetworkDisplaySpec, QubitLatticeDisplaySpec, visualize
+
 struct TensorNetworkDisplaySpec
     groups::Vector{Int}
     positions::Vector{NTuple{2, Float64}}
@@ -17,12 +19,12 @@ struct TensorNetworkDisplaySpec
 end
 
 function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
-    scatter!(ax, tnds.positions, color=tnds.colors, marker=tnds.markers)
     for c in tn.contractions
         pos1 = tnds.positions[c.a.group]
         pos2 = tnds.positions[c.b.group]
-        lines!(ax, [pos1, pos2])
+        lines!(ax, [pos1, pos2], color=:gray)
     end
+    scatter!(ax, tnds.positions, color=tnds.colors, marker=tnds.markers)
 end
 
 struct QubitLatticeDisplaySpec
