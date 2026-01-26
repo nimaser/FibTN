@@ -2,7 +2,7 @@ module IndexTriplets
 
 export ijk2p, p2ijk, abc2ijkλμνp
 
-function ijk2p(i::Int8, j::Int8, k::Int8)
+function ijk2p(i::Int, j::Int, k::Int)
     if (i == j == k) p = (i == 0) ? 1 : 5
     elseif (i == 0) p = 2
     elseif (j == 0) p = 3
@@ -11,7 +11,7 @@ function ijk2p(i::Int8, j::Int8, k::Int8)
     p
 end
 
-function p2ijk(p::Int8)
+function p2ijk(p::Int)
     i = j = k = 1
     if p == 1 i = j = k = 0
     elseif p == 2 i = 0
@@ -21,7 +21,7 @@ function p2ijk(p::Int8)
     i, j, k
 end
 
-function abc2ijkλμνp(a::Int8, b::Int8, c::Int8)
+function abc2ijkλμνp(a::Int, b::Int, c::Int)
     # eliminate cases which go to 0 due to inconsistency
     # side ends with 1 but next side doesn't start with 1
     if (a ∈ [1, 4] && b ∉ [1, 2]) throw(ArgumentError("a and b not compatible")) end

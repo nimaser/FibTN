@@ -1,8 +1,11 @@
 module Visualizer
 
+using Graphs
+
 using GLMakie
 using GraphMakie
 
+using ..Indices
 using ..TensorNetworks
 using ..QubitLattices
 
@@ -34,7 +37,7 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
         node_positions[node_num] = qlds.index_positions[idx]
     end
     # convert qubit colors to edge colors
-    edge_colors = Dict{SimpleEdge, Symbol}()
+    edge_colors = Dict{Edge, Symbol}()
     for (qubit, edge) in ql._edge_from_qubit
         edge_colors[edge] = haskey(qlds.qubit_colors, qubit) ? qlds.qubit_colors[qubit] : :gray
     end

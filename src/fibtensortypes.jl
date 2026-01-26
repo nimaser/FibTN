@@ -14,6 +14,9 @@ export index_data, tensor_data
 
 const ϕ = (1 + √5) / 2
 
+anyon(a::Int) = a == 0 ? FibonacciAnyon(:I) : a == 1 ? FibonacciAnyon(:τ) : error("a must be 0 or 1")
+#int(a::FibonacciAnyon) = a == FibonacciAnyon(:I) ? 0 : a == FibonacciAnyon(:τ) ? 1 : error("a must be FibonacciAnyon(:I or :τ)")
+
 function Gsymbol(
         a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
         d::FibonacciAnyon, e::FibonacciAnyon, f::FibonacciAnyon
@@ -65,7 +68,7 @@ index_data(::Type{DoubledFusion}) = (
 
 const _cache = IdDict{DataType,Any}()
 
-function tensor_data(::Type{T}) where {T <: AbstractTensorType}
+function tensor_data(::Type{T}) where {T <: AbstractFibTensorType}
     key = T
     get!(_cache, key) do
         generate_tensor_data(T)
@@ -95,6 +98,7 @@ function generate_tensor_data(::Type{Vertex})
             for c in 1:5
                 local i, j, k, λ, μ, ν, p
                 try i, j, k, λ, μ, ν, p = abc2ijkλμνp(a, b, c) catch; continue end
+                i, j, k, λ, μ, ν = anyon.([i, j, k, λ, μ, ν])
                 GSTriangle_data[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
             end
         end

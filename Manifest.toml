@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "92d8d7a1f1fc9c8eabf71e28fd80f7b534149038"
+project_hash = "72c9bcebcc1023c1b37deae1c6f6fbea2a176a96"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -517,7 +517,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.11+0"
 
 [[deps.FibTN]]
-deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NamedDimsArrays", "NetworkLayout", "SparseArraysBase", "TensorKitSectors", "Test"]
+deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NamedDimsArrays", "NetworkLayout", "SparseArrayKit", "SparseArraysBase", "TensorKitSectors", "TensorOperations", "Test"]
 path = "."
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
@@ -847,6 +847,12 @@ version = "1.4.5"
     [deps.InlineStrings.weakdeps]
     ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
     Parsers = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
+
+[[deps.InlineTest]]
+deps = ["Test"]
+git-tree-sha1 = "daf0743879904f0ad645ca6594e1479685f158a2"
+uuid = "bd334432-b1e7-49c7-a2dc-dd9149e4ebd6"
+version = "0.2.0"
 
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "4c1acff2dc6b6967e7e750633c50bc3b8d83e617"
@@ -1562,6 +1568,12 @@ weakdeps = ["FixedPointNumbers"]
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
+[[deps.ReTest]]
+deps = ["Distributed", "InlineTest", "PrecompileTools", "Printf", "Random", "Sockets", "Test"]
+git-tree-sha1 = "9a5136d157d1d6a2a56ff77bef1dc324e1313193"
+uuid = "e0db7c4e-2690-44b9-bad6-7687da720f89"
+version = "0.3.4"
+
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
@@ -1930,9 +1942,9 @@ version = "0.3.3"
 
 [[deps.TensorOperations]]
 deps = ["LRUCache", "LinearAlgebra", "PackageExtensionCompat", "PrecompileTools", "Preferences", "PtrArrays", "Strided", "StridedViews", "TupleTools", "VectorInterface"]
-git-tree-sha1 = "874d1dfcb9f444c750928cf4e4556098c05f88c5"
+git-tree-sha1 = "b1e835ba4d9c073169a63a0ff459577088aea4e6"
 uuid = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
-version = "5.3.1"
+version = "5.4.0"
 
     [deps.TensorOperations.extensions]
     TensorOperationsBumperExt = "Bumper"
