@@ -21,8 +21,9 @@ using SparseArrays
     A1 = SparseArray([1.0 2.0; 3.0 4.0])
     A2 = SparseArray([5.0 6.0; 7.0 8.0])
     en = ExecNetwork(tn, Dict(1 => A1, 2 => A2))
-
     @test length(en.tensor_from_id) == 2
+    @test en.next_id == 3
+
     et1, et2 = values(en.tensor_from_id)
     @test et1.indices == [a1, b1]
     @test et2.indices == [a2, b2]
@@ -49,23 +50,26 @@ end
     B = SparseArray([5.0 6.0; 7.0 8.0])
 
     en = ExecNetwork(tn, Dict(1 => A, 2 => B))
+    @test length(en.tensor_from_id) == 2
+    @test en.next_id == 3
 
-    # Execute contraction
+    # execute contraction
     execute_step!(en, IndexPair(j1, j2))
-
-    # only one tensor should remain
     @test length(en.tensor_from_id) == 1
-    et = first(values(en.tensor_from_id))
-    @test et.indices == [i, k]
+    @test en.next_id == 4
 
-    # check via @tensor
+    et = first(values(en.tensor_from_id))
+    @test et.id == 3
+    @test et.groups == Set([1, 2])
+    @test et.indices == [i, k]
+    
+    # check calculation via @tensor
     C = zeros(2,2)
     @tensor C[a,c] = A[a,b] * B[b,c]
-
     @test Array(et.data) ≈ C
 end
 
-@testset "Chain contraction of three tensors" begin
+@testset "ExecNetwork multiple contraction" begin
     # A[i,j] * B[j,k] * C[k,l] -> D[i,l]
     i = IndexLabel(1, :i)
     j1 = IndexLabel(1, :j)
@@ -91,17 +95,23 @@ end
     C = SparseArray([9.0 0.0; 1.0 2.0])
 
     en = ExecNetwork(tn, Dict(1 => A, 2 => B, 3 => C))
+    @test length(en.tensor_from_id) == 3
+    @test en.next_id == 4
 
     execute_step!(en, IndexPair(j1, j2))
     @test length(en.tensor_from_id) == 2
+    @test en.next_id == 5
     
     execute_step!(en, IndexPair(k1, k2))
     @test length(en.tensor_from_id) == 1
+    @test en.next_id == 6
+    
     et = first(values(en.tensor_from_id))
+    @test et.id == 5
+    @test et.groups == Set([1, 2, 3])
     @test et.indices == [i, l]
 
     D = zeros(2,2)
     @tensor D[a,d] = A[a,b] * B[b,c] * C[c,d]
-
     @test Array(et.data) ≈ D
 end
