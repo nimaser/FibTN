@@ -1,3 +1,11 @@
+module Executor
+
+using ..Indices
+using ..TensorNetworks
+
+export ExecTensor, ExecNetwork, ExecStep, execute_step!
+export Contraction, QRDecomp
+
 struct ExecTensor
     id::Int
     groups::Set{Int}
@@ -10,19 +18,17 @@ struct ExecTensor
 end
 
 mutable struct ExecNetwork
-    tensor_from_id::Dict{Int, TensorData}
+    tensor_from_id::Dict{Int, ExecTensor}
     id_from_index::Dict{IndexLabel, Int}
     next_id::Int
-    function ExecNetwork(ftn::FibTensorNetwork, tensordata_from_group::Dict{Int, SparseArray})
+    function ExecNetwork(tn::TensorNetwork, tensordata_from_group::Dict{Int, SparseArray})
         next_id = 1
-        tensor_from_id = Dict{Int, TensorData}
+        tensor_from_id = Dict{Int, ExecTensor}
         id_from_index = Dict{IndexLabel, Int}
-        for tl in ftn.tensors
+        for tl in tn.tensors
             et = ExecTensor(next_id, Set(tl.group), copy(tl.indices), tensordata_from_group[tl.group])
             tensor_from_id[next_id] = et
-            for index in tl.indices
-                id_from_index[index] = next_id
-            end
+            for index in tl.indices id_from_index[index] = next_id end
             next_id += 1
         end
         new(tensor_from_id, id_from_index, next_id)
@@ -98,3 +104,5 @@ end
 function execute_step(en::ExecNetwork, qrd::QRDecomp)
     # TODO
 end
+
+end # module Executor

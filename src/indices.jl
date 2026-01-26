@@ -1,3 +1,7 @@
+module Indices
+
+export IndexLabel, IndexPair
+
 struct IndexLabel
     group::Int
     port::Symbol
@@ -17,3 +21,5 @@ struct IndexPair
         new(a, b)
     end
 end
+
+end # module Indices

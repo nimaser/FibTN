@@ -4,9 +4,9 @@ module FibTN
 
 include("fibtensortypes.jl")
 
-include("index.jl")
-include("fibtensornetworks.jl")
-include("execution.jl")
+include("indices.jl")
+include("tensornetworks.jl")
+include("executor.jl")
 include("qubitlattices.jl")
 
 end # module FibTN
