@@ -6,7 +6,7 @@ using FibTN.FibTensorTypes
     # and that the dimensions match the number of indices
     
     # for some tensors also check the data
-    tensortypes = [Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion]
+    tensortypes = [Reflector, Boundary, VacuumLoop, Tail, Vertex, Crossing, Fusion]
 
     ϕ = (1 + √5) / 2
     
@@ -15,12 +15,18 @@ using FibTN.FibTensorTypes
                      0 0 1 0 0;
                      0 1 0 0 0;
                      0 0 0 0 1]
+                     
+    boundarydata = [1 0 0 0 0;
+                    0 0 0 0 0;
+                    0 0 0 0 0;
+                    0 1 0 0 0;
+                    0 0 0 0 0]
 
-    loopamplitudedata = [1 0 0 0 0;
-                         0 0 0 1 0;
-                         0 0 ϕ 0 0;
-                         0 ϕ 0 0 0;
-                         0 0 0 0 ϕ]
+    vacuumloopdata = [1 0 0 0 0;
+                      0 0 0 1 0;
+                      0 0 ϕ 0 0;
+                      0 ϕ 0 0 0;
+                      0 0 0 0 ϕ]
 
     taildata = zeros(Float64, 5, 5, 5)
     taildata[1, 1, 1] = 1
@@ -30,8 +36,9 @@ using FibTN.FibTensorTypes
     taildata[5, 5, 3] = 1
 
     tensordata = Dict(Reflector => reflectordata,
-                       LoopAmplitude => loopamplitudedata,
-                       Tail => taildata,
+                      Boundary => boundarydata,
+                      VacuumLoop => vacuumloopdata,
+                      Tail => taildata,
                       )
     
     group = 1
