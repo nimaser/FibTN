@@ -1,22 +1,20 @@
 module FibTensorTypes
 
 using ..IndexTriplets
-using ..Indices
 
 # Fibonacci input category data; dim and N, F, R symbols
 using TensorKitSectors
 const qdim = TensorKitSectors.dim # to avoid name conflict
 
 export AbstractFibTensorType
-export Reflector, LoopAmplitude, Vertex, Tail, Crossing, Fusion, End, Excitation, DoubledFusion
-export index_labels, tensor_data
+export Reflector, Boundary, VacuumLoop, Tail, Vertex, Crossing, Fusion, End, Excitation, DoubledFusion
+export tensor_ports, tensor_data
 
 ### UTILS ###
 
 const ϕ = (1 + √5) / 2
 
 anyon(a::Int) = a == 0 ? FibonacciAnyon(:I) : a == 1 ? FibonacciAnyon(:τ) : error("a must be 0 or 1")
-#int(a::FibonacciAnyon) = a == FibonacciAnyon(:I) ? 0 : a == FibonacciAnyon(:τ) ? 1 : error("a must be FibonacciAnyon(:I or :τ)")
 
 function Gsymbol(
         a::FibonacciAnyon, b::FibonacciAnyon, c::FibonacciAnyon,
@@ -30,9 +28,10 @@ end
 abstract type AbstractFibTensorType end
 
 struct Reflector        <: AbstractFibTensorType end
-struct LoopAmplitude    <: AbstractFibTensorType end
-struct Vertex           <: AbstractFibTensorType end
+struct Boundary         <: AbstractFibTensorType end
+struct VacuumLoop       <: AbstractFibTensorType end
 struct Tail             <: AbstractFibTensorType end
+struct Vertex           <: AbstractFibTensorType end
 struct Crossing         <: AbstractFibTensorType end
 struct Fusion           <: AbstractFibTensorType end
 struct End              <: AbstractFibTensorType end
@@ -41,29 +40,29 @@ struct DoubledFusion    <: AbstractFibTensorType end
 
 ### TENSOR INDEX DATA ###
 
-index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IndexLabel(group, p) for p in index_ports(T)]
+tensor_ports(::Type{Reflector}) = (:a, :b)
 
-index_ports(::Type{Reflector}) = (:a, :b)
+tensor_ports(::Type{Boundary}) = (:a, :b)
 
-index_ports(::Type{LoopAmplitude}) = (:a, :b)
+tensor_ports(::Type{VacuumLoop}) = (:a, :b)
 
-index_ports(::Type{Vertex}) = (:a, :b, :c, :p)
+tensor_ports(::Type{Tail}) = (:a, :b, :p)
 
-index_ports(::Type{Tail}) = (:a, :b, :p)
+tensor_ports(::Type{Vertex}) = (:a, :b, :c, :p)
 
-index_ports(::Type{Crossing}) = (:a, :b, :c, :d)
+tensor_ports(::Type{Crossing}) = (:a, :b, :c, :d)
 
-index_ports(::Type{Fusion}) = (:a, :b, :c)
+tensor_ports(::Type{Fusion}) = (:a, :b, :c)
 
-index_ports(::Type{End}) = (
+tensor_ports(::Type{End}) = (
 #TODO
 )
 
-index_ports(::Type{Excitation}) = (
+tensor_ports(::Type{Excitation}) = (
 #TODO
 )
 
-index_ports(::Type{DoubledFusion}) = (
+tensor_ports(::Type{DoubledFusion}) = (
 #TODO
 )
 
@@ -91,7 +90,20 @@ function generate_tensor_data(::Type{Reflector})
     arr
 end
 
-function generate_tensor_data(::Type{LoopAmplitude})
+function generate_tensor_data(::Type{Boundary})
+    arr = zeros(Float64, 5, 5)
+    for a in 1:5
+        for b in 1:5
+            μ, i, ν = split_index(a)
+            ν2, i2, μ2 = split_index(b)
+            if μ != μ2 || ν != ν2 || i != i2 continue end
+            if ν == 0 arr[a, b] = 1 end
+        end
+    end
+    arr
+end
+
+function generate_tensor_data(::Type{VacuumLoop})
     arr = zeros(Float64, 5, 5)
     for a in 1:5
         for b in 1:5
@@ -99,6 +111,20 @@ function generate_tensor_data(::Type{LoopAmplitude})
             ν2, i2, μ2 = split_index(b)
             if μ != μ2 || ν != ν2 || i != i2 continue end
             arr[a, b] = μ == 0 ? 1 : ϕ
+        end
+    end
+    arr
+end
+
+function generate_tensor_data(::Type{Tail})
+    arr = zeros(Float64, 5, 5, 5)
+    for a in 1:5
+        for b in 1:5
+            μ, x, ν = split_index(a)
+            ν2, x2, μ2 = split_index(b)
+            if μ != μ2 || ν != ν2 || x != x2 continue end
+            p = combine_indices(x, 0, x2)
+            arr[a, b, p] = 1
         end
     end
     arr
@@ -120,20 +146,6 @@ function generate_tensor_data(::Type{Vertex})
                 i, j, k, λ, μ, ν = anyon.([i, j, k, λ, μ, ν])
                 arr[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
             end
-        end
-    end
-    arr
-end
-
-function generate_tensor_data(::Type{Tail})
-    arr = zeros(Float64, 5, 5, 5)
-    for a in 1:5
-        for b in 1:5
-            μ, x, ν = split_index(a)
-            ν2, x2, μ2 = split_index(b)
-            if μ != μ2 || ν != ν2 || x != x2 continue end
-            p = combine_indices(x, 0, x2)
-            arr[a, b, p] = 1
         end
     end
     arr
