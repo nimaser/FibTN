@@ -78,8 +78,6 @@ function tensor_data(::Type{T}) where {T <: AbstractFibTensorType}
     end
 end
 
-struct IncompabibleIndexException <: Exception end
-
 function generate_tensor_data(::Type{Reflector})
     [1 0 0 0 0;
      0 0 0 1 0;
@@ -97,23 +95,18 @@ function generate_tensor_data(::Type{LoopAmplitude})
 end
 
 function generate_tensor_data(::Type{Vertex})
-    # break out indices
-    function _abc2ijkλμνp(a::Int, b::Int, c::Int)
-        μ, i, ν = split_index(a)
-        ν2, j, λ = split_index(b)
-        λ2, k, μ2 = split_index(c)
-        # eliminate cases which go to 0 due to inconsistency
-        if μ != μ2 || ν != ν2 || λ != λ2 throw(IncompatibleIndexException()) end
-        i, j, k, λ, μ, ν, combine_indices(i, j, k)
-    end
-
-    # generate data
     arr = zeros(Float64, 5, 5, 5, 5)
     for a in 1:5
         for b in 1:5
             for c in 1:5
-                local i, j, k, λ, μ, ν, p
-                try i, j, k, λ, μ, ν, p = _abc2ijkλμνp(a, b, c) catch ::IncompatibleIndexException; continue end
+                # break out indices
+                μ, i, ν = split_index(a)
+                ν2, j, λ = split_index(b)
+                λ2, k, μ2 = split_index(c)
+                # abort inconsistent cases, leaving them 0
+                if μ != μ2 || ν != ν2 || λ != λ2 continue end
+                # get p, convert integers to anyons, and calculate the entry
+                p = combine_indices(i, j, k)
                 i, j, k, λ, μ, ν = anyon.([i, j, k, λ, μ, ν])
                 arr[a, b, c, p] = Gsymbol(i, j, λ, μ, k, ν) * √√(qdim(i)*qdim(j)*qdim(k))
             end
@@ -123,44 +116,31 @@ function generate_tensor_data(::Type{Vertex})
 end
 
 function generate_tensor_data(::Type{Tail})
-    # break out indices
-    function _ab2xyμνp(a::Int, b::Int)
-        μ, x, ν = p2ijk(a)
-        ν2, y, μ2 = p2ijk(b)
-        # eliminate cases which go to 0 due to inconsistency
-        if μ != μ2 || ν != ν2 throw(IncompatibleIndexException()) end
-        x, y, μ, ν, combine_indices(x, 1, y)
-    end
-
-    # generate data
     arr = zeros(Float64, 5, 5, 5)
     for a in 1:5
         for b in 1:5
-            try x, y, μ, ν, p = _ab2xyμνp(a, b) catch ::IncompatibleIndexException; continue end
-            arr[a, b, p] = x == y ? 1 : 0
+            μ, x, ν = p2ijk(a)
+            ν2, y, μ2 = p2ijk(b)
+            if μ != μ2 || ν != ν2 || x != y continue end
+            p = combine_indices(x, 1, y)
+            arr[a, b, p] = 1
         end
     end
     arr
 end
 
 function generate_tensor_data(::Type{Crossing})
-    # break out indices
-    function _abcd2ksλμνξ(a::Int, b::Int, c::Int, d::Int)
-        ξ, k, λ = split_index(a)
-        λ2, s, μ = split_index(b)
-        μ2, k2, ν = split_index(c)
-        ν2, s2, ξ2 = split_index(d)
-        if ξ != ξ2 || λ != λ2 || μ != μ2 || ν != ν2 || k != k2 || s != s2 throw(IncompatibleIndexException()) end
-        k, s, λ, μ, ν, ξ
-    end
-
-    # generate data
     arr = zeros(Float64, 5, 5, 5, 5)
     for a in 1:5
         for b in 1:5
             for c in 1:5
                 for d in 1:5
-                    try k, s, λ, μ, ν, ξ = _abcd2ksλμνξ(a, b, c, d) catch ::IncompatibleIndexException; continue end
+                    ξ, k, λ = split_index(a)
+                    λ2, s, μ = split_index(b)
+                    μ2, k2, ν = split_index(c)
+                    ν2, s2, ξ2 = split_index(d)
+                    if ξ != ξ2 || λ != λ2 || μ != μ2 || ν != ν2 || k != k2 || s != s2 continue end
+                    μ, λ, ξ, ν, s, k = anyon.([μ, λ, ξ, ν, s, k])
                     arr[a, b, c, d] = Gsymbol(μ, λ, ξ, ν, s, k)
                 end
             end
@@ -170,20 +150,15 @@ function generate_tensor_data(::Type{Crossing})
 end
 
 function generate_tensor_data(::Type{Fusion})
-    # break out indices
-    function _abc2stuλμν(a::Int, b::Int, c::Int)
-        μ, s, ν = split_index(a)
-        ν2, t, λ = split_index(b)
-        λ2, u, μ2 = split_index(c)
-        if λ != λ2 || μ != μ2 || ν != ν2 throw(IncompatibleIndexException()) end
-        s, t, u, λ, μ, ν
-    end
-
-    # generate data
+    arr = zeros(Float64, 5, 5, 5)
     for a in 1:5
         for b in 1:5
             for c in 1:5
-                try s, t, u, λ, μ, ν = _abc2stuλμν(a, b, c) catch ::IncompatibleIndexException; continue end
+                μ, s, ν = split_index(a)
+                ν2, t, λ = split_index(b)
+                λ2, u, μ2 = split_index(c)
+                if λ != λ2 || μ != μ2 || ν != ν2 continue end
+                s, t, λ, ν, u, μ = anyon.([s, t, λ, ν, u, μ])
                 arr[a, b, c] = Gsymbol(s, t, λ, ν, u, μ) * √√(qdim(s)*qdim(t)*qdim(u))
             end
         end
