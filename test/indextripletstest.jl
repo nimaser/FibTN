@@ -16,7 +16,7 @@ end
     @test split_index(5) == (1, 1, 1)
 end
 
-@testset "p2ijk2p roundtrip" begin
+@testset "split and combine roundtrip" begin
     for a in 1:5
         i, j, k = split_index(a)
         @test combine_indices(i, j, k) == a
