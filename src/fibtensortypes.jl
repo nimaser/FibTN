@@ -79,19 +79,29 @@ function tensor_data(::Type{T}) where {T <: AbstractFibTensorType}
 end
 
 function generate_tensor_data(::Type{Reflector})
-    [1 0 0 0 0;
-     0 0 0 1 0;
-     0 0 1 0 0;
-     0 1 0 0 0;
-     0 0 0 0 1]
+    arr = zeros(Float64, 5, 5)
+    for a in 1:5
+        for b in 1:5
+            μ, i, ν = split_index(a)
+            ν2, i2, μ2 = split_index(b)
+            if μ != μ2 || ν != ν2 || i != i2 continue end
+            arr[a, b] = 1
+        end
+    end
+    arr
 end
 
 function generate_tensor_data(::Type{LoopAmplitude})
-    [1 0 0 0 0;
-     0 1 0 0 0;
-     0 0 ϕ 0 0;
-     0 0 0 ϕ 0;
-     0 0 0 0 ϕ]
+    arr = zeros(Float64, 5, 5)
+    for a in 1:5
+        for b in 1:5
+            μ, i, ν = split_index(a)
+            ν2, i2, μ2 = split_index(b)
+            if μ != μ2 || ν != ν2 || i != i2 continue end
+            arr[a, b] = μ == 0 ? 1 : ϕ
+        end
+    end
+    arr
 end
 
 function generate_tensor_data(::Type{Vertex})
@@ -119,10 +129,10 @@ function generate_tensor_data(::Type{Tail})
     arr = zeros(Float64, 5, 5, 5)
     for a in 1:5
         for b in 1:5
-            μ, x, ν = p2ijk(a)
-            ν2, y, μ2 = p2ijk(b)
-            if μ != μ2 || ν != ν2 || x != y continue end
-            p = combine_indices(x, 1, y)
+            μ, x, ν = split_index(a)
+            ν2, x2, μ2 = split_index(b)
+            if μ != μ2 || ν != ν2 || x != x2 continue end
+            p = combine_indices(x, 0, x2)
             arr[a, b, p] = 1
         end
     end

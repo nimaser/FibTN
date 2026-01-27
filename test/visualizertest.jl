@@ -29,6 +29,7 @@ using GLMakie
     hidedecorations!(ax)
     hidespines!(ax)
     visualize(tn, tnds, ax)
+    display(f)
 end
 
 @testset "visualize QubitLattice" begin

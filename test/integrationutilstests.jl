@@ -1,10 +1,12 @@
-using FibTN.FibTensorTypes
-
 using FibTN.Indices
 using FibTN.TensorNetworks
 using FibTN.Executor
 using FibTN.QubitLattices
 using FibTN.Visualizer
+
+using FibTN.FibTensorTypes
+
+using SparseArrayKit
 
 @testset "integration 1-plaquettes 3-sides" begin
     # build network
@@ -23,7 +25,10 @@ using FibTN.Visualizer
     T3 = SparseArray(tensor_data(Tail))
     T4 = SparseArray(tensor_data(LoopAmplitude))
     en = ExecNetwork(tn, Dict(1 => T1, 2 => T2, 3 => T3, 4 => T4))
-    for c in tn.contractions execute_step!(en, Contraction(c)) end
+    for c in tn.contractions
+        @show c
+        execute_step!(en, Contraction(c))
+    end
     et = execute_step!(en, FetchResult())
     @show et.data
     @show et.indices
