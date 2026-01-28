@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "72c9bcebcc1023c1b37deae1c6f6fbea2a176a96"
+project_hash = "77186585dea4bda5c5e5930da6b56be05b6b2d66"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -517,7 +517,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.11+0"
 
 [[deps.FibTN]]
-deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NamedDimsArrays", "NetworkLayout", "SparseArrayKit", "SparseArraysBase", "TensorKitSectors", "TensorOperations", "Test"]
+deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NamedDimsArrays", "NetworkLayout", "ReTest", "SparseArrayKit", "SparseArraysBase", "TensorKitSectors", "TensorOperations", "Test"]
 path = "."
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
