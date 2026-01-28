@@ -3,7 +3,7 @@ module TensorNetworks
 using ..Indices
 
 export TensorLabel, TensorNetwork, add_tensor!, add_contraction!
-export find_indices, find_indices_by_group, find_indices_by_port, find_index
+export indices, find_indices, find_indices_by_group, find_indices_by_port, find_index
 
 struct TensorLabel
     group::Int
@@ -53,9 +53,11 @@ function add_contraction!(tn::TensorNetwork, ip::IndexPair)
     tn._index_use_count[ip.b] += 1
 end
 
+indices(tn::TensorNetwork) = keys(tn.tensor_with_index)
+
 function find_indices(f::Function, tn::TensorNetwork)
     matches = IndexLabel[]
-    for idx in keys(tn.tensor_with_index)
+    for idx in indices(tn)
         if f(idx) push!(matches, idx) end
     end
     matches

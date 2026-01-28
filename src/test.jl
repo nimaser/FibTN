@@ -1,5 +1,6 @@
 using FibTN.FibTensorTypes
 using FibTN.IntegrationUtils
+using FibTN.QubitLattices
 
 function tail_triangle()
     tt2gs = Dict(
@@ -21,6 +22,18 @@ function tail_triangle()
     tn = build_tn(g2tt, contractions)
     inds, data = dumb_contract_tn(tn, g2tt)
     plot(tn, positions, g2tt)
+    
+    ql = QubitLattice()
+    add_index!(ql, IndexLabel(1, :p), [3, 1, 4])
+    add_index!(ql, IndexLabel(2, :p), [1, 2, 5])
+    add_index!(ql, IndexLabel(3, :p), [2, 3, 6])
+    pinds = filter(idx -> idx.port == :p, collect(indices(tn)))
+    pind_positions = [pind => positions[pind.group] for pind in pinds]
+    
+    
+    s, a = get_lattice_states(ql, inds, data)
+    qubit_colors = Dict(q, v == 1 ? :red : :black for (q, v) in s[1])
+    qlds = QubitLatticeDisplaySpec(pind_positions, qubit_colors, 0.5)
 end
 
 function tail_square()
