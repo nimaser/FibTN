@@ -47,14 +47,15 @@ end
 
 function get_qubit_states(ql::QubitLattice, idx::IndexLabel, idxval::Int)
     qvals = split_index(idxval)
-    Dict(q => v for (q, v) in zip(ql.qubits_from_index, qvals))
+    Dict(q => v for (q, v) in zip(ql.qubits_from_index[idx], qvals))
 end
 
-function get_lattice_state(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Tuple{Int})
+function get_lattice_state(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vector{Int})
     lattice_state = Dict{Int, Int}()
     for (idx, idxval) in zip(inds, vals)
-        mergewith!(lattice_state, get_qubit_states(ql, idx, idxval)) do x,y begin
-            error("inconsistent qubit values $x and $y found for qubit")
+        mergewith!(lattice_state, get_qubit_states(ql, idx, idxval)) do x,y
+            if x != y error("inconsistent qubit values $x and $y found for qubit") end
+            x
         end
     end
     lattice_state
