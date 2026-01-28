@@ -19,12 +19,22 @@ struct TensorNetworkDisplaySpec
 end
 
 function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
+    edge_endpoints = []
     for c in tn.contractions
         pos1 = tnds.positions[c.a.group]
         pos2 = tnds.positions[c.b.group]
-        lines!(ax, [pos1, pos2], color=:gray)
+        push!(edge_endpoints, (pos1, pos2))
     end
-    scatter!(ax, tnds.positions, color=tnds.colors, marker=tnds.markers)
+    segmentsresult = linesegments!(ax, edge_endpoints, color=:gray)
+    segmentsresult.inspector_label = (plot, i, idx) -> begin
+        ip = tn.contractions[i]
+        "$(ip.a.group) $(ip.a.port); $(ip.b.group) $(ip.b.port)"
+    end
+    
+    scatterresult = scatter!(ax, tnds.positions, color=tnds.colors, marker=tnds.markers)
+    scatterresult.inspector_label = (plot, i, idx) -> "$(tnds.groups[i])"
+    
+    segmentsresult, scatterresult
 end
 
 struct QubitLatticeDisplaySpec
