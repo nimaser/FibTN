@@ -1,3 +1,4 @@
+using FibTN.Indices
 using FibTN.FibTensorTypes
 using FibTN.IntegrationUtils
 using FibTN.QubitLattices
@@ -27,13 +28,20 @@ function tail_triangle()
     add_index!(ql, IndexLabel(1, :p), [3, 1, 4])
     add_index!(ql, IndexLabel(2, :p), [1, 2, 5])
     add_index!(ql, IndexLabel(3, :p), [2, 3, 6])
+    s, a = get_states_and_amps(ql, inds, data)
+
     pinds = filter(idx -> idx.port == :p, collect(indices(tn)))
     pind_positions = [pind => positions[pind.group] for pind in pinds]
-    
-    
-    s, a = get_lattice_states(ql, inds, data)
     qubit_colors = Dict(q, v == 1 ? :red : :black for (q, v) in s[1])
     qlds = QubitLatticeDisplaySpec(pind_positions, qubit_colors, 0.5)
+
+    f = Figure()
+    ax = Axis(f[1, 1])
+    hidedecorations!(ax)
+    hidespines!(ax)
+    visualize(ql, qlds, ax)
+    DataInspector(f, range=30)
+    display(f)
 end
 
 function tail_square()

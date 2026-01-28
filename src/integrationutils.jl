@@ -9,6 +9,8 @@ using ..FibTN.FibTensorTypes
 
 using GLMakie
 
+using SparseArrayKit
+
 export index_labels, make_g2tt, contractionchain, build_tn, dumb_contract_tn
 export tt2color, tt2marker, plot
 
@@ -40,8 +42,8 @@ end
 
 function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
     lattice_states, amplitudes = Vector{Dict{Int, Int}}, Vector{Real}
-    for cidx, amp in nonzero_pairs(data)
-        push!(lattice_state, get_qubit_states(ql, inds, Tuple(cidx)))
+    for (cidx, amp) in nonzero_pairs(data)
+        push!(lattice_state, get_qubit_states(ql, inds, Tuple(cidx)[:]))
         push!(amplitudes, amp)
     end
     lattice_states, state_amplitudes
