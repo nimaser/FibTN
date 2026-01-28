@@ -38,6 +38,15 @@ function dumb_contract_tn(tn::TensorNetwork, g2tt::Dict{Int, DataType})
     et.indices, et.data
 end
 
+function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
+    lattice_states, amplitudes = Vector{Dict{Int, Int}}, Vector{Real}
+    for cidx, amp in nonzero_pairs(data)
+        push!(lattice_state, get_qubit_states(ql, inds, Tuple(cidx)))
+        push!(amplitudes, amp)
+    end
+    lattice_states, state_amplitudes
+end
+
 tt2color(::Type{Reflector}) = :gray
 tt2color(::Type{Boundary}) = :black
 tt2color(::Type{VacuumLoop}) = :orange
@@ -65,7 +74,7 @@ function plot(tn::TensorNetwork, positions::Vector{<:Tuple{<:Real, <:Real}}, g2t
     hidedecorations!(ax)
     hidespines!(ax)
     visualize(tn, tnds, ax)
-    DataInspector(f)
+    DataInspector(f, range=30)
     display(f)
 end
 
