@@ -120,6 +120,23 @@ end
     @test Set(ql._unpaired_qubits) == Set([4, 5, 6])
 end
 
+@testset "QubitLattice extraction basics" begin
+    ql = QubitLattice()
+    idx = IndexLabel(1, :p)
+    add_index!(ql, idx, [7, 9, 1])
+
+    # check that correct values are returned and in the right order
+    for val in 1:5
+        qs = get_qubit_states(ql, idx, val)
+        @test (qs[7], qs[9], qs[1]) == split_index(val)
+    end
+
+    # add index with shared qubit 7, check that inconsistency errors
+    idx2 = IndexLabel(2, :p)
+    add_index!(ql, idx2, [7, 4, 2])
+    @test_throws ErrorException get_lattice_state(ql, [idx, idx2], [1, 5])
+end
+
 @testset "QubitLattice extraction no unpaired" begin
     ql = QubitLattice()
     # tetrahedron projected onto plane
@@ -134,12 +151,13 @@ end
             IndexLabel(2, :p),
            ]
     test_indices = [
-                    (1, 1, 1, 1), # all 0
-                    (4, 3, 2, 1), # small triangle
-                    (3, 1, 3, 3), # big triangle
-                    (4, 5, 5, 2), # adjacent triangles
-                    (4, 4, 3, 2), # quadrilateral
-                    (5, 5, 5, 5), # all 1
+                    [1, 1, 1, 1], # all 0
+                    [3, 1, 3, 3], # big triangle
+                    [5, 5, 5, 5], # all 1
+                    [4, 3, 2, 1], # small triangle
+                    [4, 5, 5, 2], # adjacent triangles
+                    [4, 4, 3, 2], # quadrilateral
+                    [5, 4, 3, 5], # nested triangles
                    ]
     ref_lattices = [
                     Dict( # all 0
@@ -150,14 +168,6 @@ end
                          5=>0,
                          6=>0,
                         ),
-                    Dict( # small triangle
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>0,
-                         5=>0,
-                         6=>1,
-                        ),
                     Dict( # big triangle
                          1=>1,
                          2=>0,
@@ -165,6 +175,22 @@ end
                          4=>0,
                          5=>1,
                          6=>0,
+                        ),
+                    Dict( # all 1
+                         1=>1,
+                         2=>1,
+                         3=>1,
+                         4=>1,
+                         5=>1,
+                         6=>1,
+                        ),
+                    Dict( # small triangle
+                         1=>1,
+                         2=>1,
+                         3=>0,
+                         4=>0,
+                         5=>0,
+                         6=>1,
                         ),
                     Dict( # adjacent triangles
                          1=>1,
@@ -182,13 +208,13 @@ end
                          5=>1,
                          6=>0,
                         ),
-                    Dict( # all 1
+                    Dict( # nested triangles
                          1=>1,
                          2=>1,
                          3=>1,
                          4=>1,
                          5=>1,
-                         6=>1,
+                         6=>0,
                         ),
                    ]
     for (vals, ref_lattice) in zip(test_indices, ref_lattices)
@@ -197,7 +223,7 @@ end
     end
 end
 
-@testset "QubitLattice extraction nounpaired" begin
+@testset "QubitLattice extraction unpaired" begin
     ql = QubitLattice()
     # triangle
     add_index!(ql, IndexLabel(2, :p), [3, 5, 4])
@@ -209,12 +235,8 @@ end
             IndexLabel(1, :p),
            ]
     test_indices = [
-                    (1, 1, 1), # all 0
-                    (4, 2, 1), # small triangle
-                    (3, 3, 3), # big triangle
-                    (4, 5, 2), # adjacent triangles
-                    (4, 3, 2), # quadrilateral
-                    (5, 5, 5), # all 1
+                    [1, 1, 1], # all 0
+                    [5, 5, 5], # all 1
                    ]
     ref_lattices = [
                     Dict( # all 0
@@ -223,38 +245,6 @@ end
                          3=>0,
                          4=>0,
                          5=>0,
-                         6=>0,
-                        ),
-                    Dict( # small triangle
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>0,
-                         5=>0,
-                         6=>1,
-                        ),
-                    Dict( # big triangle
-                         1=>1,
-                         2=>0,
-                         3=>1,
-                         4=>0,
-                         5=>1,
-                         6=>0,
-                        ),
-                    Dict( # adjacent triangles
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>1,
-                         5=>1,
-                         6=>1,
-                        ),
-                    Dict( # quadrilateral
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>1,
-                         5=>1,
                          6=>0,
                         ),
                     Dict( # all 1
@@ -271,12 +261,3 @@ end
         @test lattice == ref_lattice
     end
 end
-
-@testset "QubitLattice extraction inconsistent" begin
-    
-end
-    
-function get_qubit_states(ql::QubitLattice, idx::IndexLabel, idxval::Int)
-    
-function get_lattice_state(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Tuple{Int})
-    
