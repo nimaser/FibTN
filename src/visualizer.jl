@@ -58,12 +58,12 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
         n = ql._node_from_index[idx]
         pos = index_positions[n]
         # set pos of the new node to be slightly to the +x of the index
-        index_positions[nv(g)] = (pos[1] + unpaired_qubit_length, pos[2])
+        index_positions[nv(g)] = (pos[1] + qlds.unpaired_qubit_length, pos[2])
         # add a new edge to the graph and map to it from the qubit
         add_edge!(g, n, nv(g))
         edge_from_qubit[q] = Edge(n, nv(g))
     end
-    
+
     # convert node position dict to node position array
     node_positions = Vector{Tuple{Float64, Float64}}(undef, nv(g))
     for n in 1:nv(g)
@@ -75,6 +75,7 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     for (qubit, edge) in edge_from_qubit
         edge_colors[edge] = haskey(qlds.qubit_colors, qubit) ? qlds.qubit_colors[qubit] : :gray
     end
+
     graphplot!(ax, g, layout=node_positions, edge_color=[edge_colors[e] for e in edges(g)])
 end
 

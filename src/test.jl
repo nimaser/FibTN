@@ -1,9 +1,14 @@
 using FibTN.Indices
+using FibTN.TensorNetworks
 using FibTN.FibTensorTypes
 using FibTN.IntegrationUtils
 using FibTN.QubitLattices
+using FibTN.Visualizer
+
+using GLMakie
 
 function tail_triangle()
+    # tensors
     tt2gs = Dict(
                  Reflector        => [2, 4, 6],
                  Tail             => [1, 3, 5],
@@ -16,23 +21,29 @@ function tail_triangle()
         (1, 0),
         (0, 0),
     ]
+    # contractions
     contractions = contractionchain(1, 6, :b, :a)
     push!(contractions, (6, :b) => (1, :a))
-    
+    # qubits
+    qubits = Dict(
+                  IndexLabel(1, :p), [3, 4, 1],
+                  IndexLabel(3, :p), [1, 5, 2],
+                  IndexLabel(5, :p), [2, 6, 3],
+                 )
     g2tt = make_g2tt(tt2gs)
     tn = build_tn(g2tt, contractions)
     inds, data = dumb_contract_tn(tn, g2tt)
-    plot(tn, positions, g2tt)
+    IntegrationUtils.plot(tn, positions, g2tt)
     
     ql = QubitLattice()
-    add_index!(ql, IndexLabel(1, :p), [3, 1, 4])
-    add_index!(ql, IndexLabel(2, :p), [1, 2, 5])
-    add_index!(ql, IndexLabel(3, :p), [2, 3, 6])
+    add_index!(ql, IndexLabel(1, :p), [3, 4, 1])
+    add_index!(ql, IndexLabel(3, :p), [1, 5, 2])
+    add_index!(ql, IndexLabel(5, :p), [2, 6, 3])
     s, a = get_states_and_amps(ql, inds, data)
 
     pinds = filter(idx -> idx.port == :p, collect(indices(tn)))
-    pind_positions = [pind => positions[pind.group] for pind in pinds]
-    qubit_colors = Dict(q, v == 1 ? :red : :black for (q, v) in s[1])
+    pind_positions = Dict(pind => positions[pind.group] for pind in pinds)
+    qubit_colors = Dict(q => v == 1 ? :red : :black for (q, v) in s[1])
     qlds = QubitLatticeDisplaySpec(pind_positions, qubit_colors, 0.5)
 
     f = Figure()

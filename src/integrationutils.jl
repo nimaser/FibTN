@@ -11,7 +11,7 @@ using GLMakie
 
 using SparseArrayKit
 
-export index_labels, make_g2tt, contractionchain, build_tn, dumb_contract_tn
+export index_labels, make_g2tt, contractionchain, build_tn, dumb_contract_tn, get_states_and_amps
 export tt2color, tt2marker, plot
 
 index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IndexLabel(group, p) for p in tensor_ports(T)]
@@ -41,12 +41,12 @@ function dumb_contract_tn(tn::TensorNetwork, g2tt::Dict{Int, DataType})
 end
 
 function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
-    lattice_states, amplitudes = Vector{Dict{Int, Int}}, Vector{Real}
+    lattice_states, amplitudes = Vector{Dict{Int, Int}}(), Vector{Real}()
     for (cidx, amp) in nonzero_pairs(data)
-        push!(lattice_state, get_qubit_states(ql, inds, Tuple(cidx)[:]))
+        push!(lattice_states, get_lattice_state(ql, inds, [Tuple(cidx)...]))
         push!(amplitudes, amp)
     end
-    lattice_states, state_amplitudes
+    lattice_states, amplitudes
 end
 
 tt2color(::Type{Reflector}) = :gray
@@ -78,6 +78,10 @@ function plot(tn::TensorNetwork, positions::Vector{<:Tuple{<:Real, <:Real}}, g2t
     visualize(tn, tnds, ax)
     DataInspector(f, range=30)
     display(f)
+end
+
+function plot(ql::QubitLattice, 
+
 end
 
 end # module IntegrationUtils
