@@ -1,4 +1,6 @@
 using FibTN.Indices
+const IP = IndexPair
+const IL = IndexLabel
 using FibTN.TensorNetworks
 using FibTN.FibTensorTypes
 using FibTN.IntegrationUtils
@@ -7,52 +9,40 @@ using FibTN.Visualizer
 
 using GLMakie
 
+include("integrationutils.jl")
+
 function tail_triangle()
     # tensors
     tt2gs = Dict(
                  Reflector        => [2, 4, 6],
                  Tail             => [1, 3, 5],
                 )
-    positions = [
-        (-1, 0),
-        (-1/2, √3/2),
-        (0, √3),
-        (1/2, √3/2),
-        (1, 0),
-        (0, 0),
-    ]
+    positions = insert_midpoints(triangle())
     # contractions
     contractions = contractionchain(1, 6, :b, :a)
-    push!(contractions, (6, :b) => (1, :a))
+    push!(contractions, IP(IL(6, :b), IL(1, :a)))
     # qubits
-    qubits = Dict(
-                  IndexLabel(1, :p), [3, 4, 1],
-                  IndexLabel(3, :p), [1, 5, 2],
-                  IndexLabel(5, :p), [2, 6, 3],
-                 )
+    qubits_from_index = Dict(
+                             IL(1, :p) => [3, 4, 1],
+                             IL(3, :p) => [1, 5, 2],
+                             IL(5, :p) => [2, 6, 3],
+                            )
+    # tn construction
     g2tt = make_g2tt(tt2gs)
     tn = build_tn(g2tt, contractions)
-    inds, data = dumb_contract_tn(tn, g2tt)
-    IntegrationUtils.plot(tn, positions, g2tt)
-    
-    ql = QubitLattice()
-    add_index!(ql, IndexLabel(1, :p), [3, 4, 1])
-    add_index!(ql, IndexLabel(3, :p), [1, 5, 2])
-    add_index!(ql, IndexLabel(5, :p), [2, 6, 3])
+    # en construction and execution
+    inds, data = naive_contract_tn(tn, g2tt)
+    inds2, data2 = in_edge_first_contract(tn, g2tt)
+    @show inds, inds2
+    @show data, data2
+    # ql and data extraction
+    ql = build_ql(qubits_from_index)
     s, a = get_states_and_amps(ql, inds, data)
-
-    pinds = filter(idx -> idx.port == :p, collect(indices(tn)))
-    pind_positions = Dict(pind => positions[pind.group] for pind in pinds)
-    qubit_colors = Dict(q => v == 1 ? :red : :black for (q, v) in s[1])
-    qlds = QubitLatticeDisplaySpec(pind_positions, qubit_colors, 0.5)
-
-    f = Figure()
-    ax = Axis(f[1, 1])
-    hidedecorations!(ax)
-    hidespines!(ax)
-    visualize(ql, qlds, ax)
-    DataInspector(f, range=30)
-    display(f)
+    # visualization
+    plot(tn, positions, g2tt)
+    for state in s
+        plot(ql, positions, state)
+    end
 end
 
 function tail_square()

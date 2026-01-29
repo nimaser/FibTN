@@ -45,6 +45,8 @@ function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::Vector{Int})
     end
 end
 
+indices(ql::QubitLattice) = keys(ql.qubits_from_index)
+
 function get_qubit_states(ql::QubitLattice, idx::IndexLabel, idxval::Int)
     qvals = split_index(idxval)
     Dict(q => v for (q, v) in zip(ql.qubits_from_index[idx], qvals))
