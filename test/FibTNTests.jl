@@ -13,6 +13,5 @@ include("executortest.jl")
 include("qubitlatticestest.jl")
 
 include("fibtensortypestest.jl")
-#include("integrationutilstests.jl")
 
 end # module FibTNTests

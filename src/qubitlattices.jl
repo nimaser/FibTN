@@ -4,8 +4,8 @@ using Graphs
 using ..Indices
 using ..IndexTriplets
 
-export QubitLattice, add_index!
-export get_qubit_states, get_lattice_state, get_state
+export QubitLattice, add_index!, indices
+export idxval2qubitvals, idxvals2qubitvals, qubitvals2idxvals
 
 struct QubitLattice
     qubits_from_index::Dict{IndexLabel, Vector{Int}}
@@ -47,20 +47,30 @@ end
 
 indices(ql::QubitLattice) = keys(ql.qubits_from_index)
 
-function get_qubit_states(ql::QubitLattice, idx::IndexLabel, idxval::Int)
-    qvals = split_index(idxval)
+function idxval2qubitvals(ql::QubitLattice, idx::IndexLabel, val::Int)
+    qvals = split_index(val)
     Dict(q => v for (q, v) in zip(ql.qubits_from_index[idx], qvals))
 end
 
-function get_lattice_state(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vector{Int})
-    lattice_state = Dict{Int, Int}()
-    for (idx, idxval) in zip(inds, vals)
-        mergewith!(lattice_state, get_qubit_states(ql, idx, idxval)) do x,y
+function idxvals2qubitvals(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vector{Int})
+    qubitvals = Dict{Int, Int}()
+    for (idx, val) in zip(inds, vals)
+        mergewith!(qubitvals, idxval2qubitvals(ql, idx, val)) do x,y
             if x != y error("inconsistent qubit values $x and $y found for qubit") end
             x
         end
     end
-    lattice_state
+    qubitvals
+end
+
+function qubitvals2idxvals(ql::QubitLattice, qubitvals::Dict{Int, Int})
+    inds = Vector{IndexLabel}
+    vals = Vector{Int}
+    for idx in indices(ql)
+        push!(inds, idx)
+        push!(vals, combine_indices(qubitvals[q] for q in ql.qubits_from_index[idx]))
+    end
+    inds, vals
 end
 
 end # module QubitLattices

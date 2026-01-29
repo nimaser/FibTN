@@ -73,6 +73,9 @@ end
     @test tn._index_use_count[c1] == 2
     @test tn.contraction_with_index[a2] == ip2
     @test tn.contraction_with_index[c1] == ip2
+
+    # check indices call
+    @test Set(TensorNetworks.indices(tn)) == Set([a1, b1, c1, a2])
 end
 
 @testset "TensorNetwork multiple contractions" begin
