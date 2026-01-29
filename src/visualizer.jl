@@ -34,6 +34,8 @@ function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
     
     scatterresult = scatter!(ax, tnds.positions, color=tnds.colors, marker=tnds.markers, markersize=40)
     scatterresult.inspector_label = (plot, i, idx) -> "$(tnds.groups[i])"
+
+    autolimits!(ax)
     
     segmentsresult, scatterresult
 end
@@ -46,7 +48,7 @@ end
 
 function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     # convert index_positions to map from node to position
-    position_from_node = Dict(ql._node_from_index[i] => qlds.pos_from_index[i] for i in keys(ql.qubits_from_index))
+    position_from_node = Dict(ql._node_from_index[i] => qlds.position_from_index[i] for i in keys(ql.qubits_from_index))
     
     # for each unpaired qubit, make a dummy index and node for display
     g = copy(ql.graph) # copy graph so the original is unaltered
@@ -77,6 +79,7 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     end
 
     graphplot!(ax, g, layout=node_positions, edge_color=[color_from_edge[e] for e in edges(g)])
+    autolimits!(ax)
 end
 
 end # module Visualizer

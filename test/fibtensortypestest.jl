@@ -41,12 +41,11 @@ using FibTN.FibTensorTypes
                       Tail => taildata,
                       )
     
-    group = 1
     for tt in tensortypes
-        ils = index_labels(tt, group)
+        ips = tensor_ports(tt)
         td1 = tensor_data(tt)
         td2 = tensor_data(tt)
-        @test length(ils) == ndims(td1)
+        @test length(ips) == ndims(td1)
         @test td1 === td2
         if haskey(tensordata, tt) @test td1 == tensordata[tt] end
     end

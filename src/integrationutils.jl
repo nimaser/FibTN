@@ -27,11 +27,11 @@ function build_tn(g2tt::Dict{Int, DataType}, contractions::Vector{IP})
 end
 
 function in_edge_contractions(tn::TensorNetwork, g2tt::Dict{Int, DataType})
-    contractions = Vector{IP}
+    contractions = Vector{IP}()
     for (g, tt) in g2tt
-        if tt ∈ Set(Reflection, Boundary, VacuumLoop)
+        if tt ∈ Set([Reflector, Boundary, VacuumLoop])
             idx = first(tensor_with_group(tn, g).indices)
-            push!(contractions, tn.contraction_with_index(idx))
+            push!(contractions, tn.contraction_with_index[idx])
         end
     end
     contractions
@@ -49,11 +49,11 @@ end
 
 build_en(tn::TensorNetwork, g2tt::Dict{Int, DataType}) = ExecNetwork(tn, Dict(g=>tensor_data(tt) for (g,tt) in g2tt))
 
-do_steps(en::ExecNetwork, execsteps::Vector{ExecStep}) = for es in execsteps execute_step!(en, es) end
+do_steps(en::ExecNetwork, execsteps::Vector{<:ExecStep}) = for es in execsteps execute_step!(en, es) end
 
 fetch_result(en::ExecNetwork) = begin et = execute_step!(en, FetchResult()); et.indices, et.data end
 
-function specified_contract(tn::TensorNetwork, g2tt::Dict{int, DataType}, contractions::Vector{IP})
+function specified_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType}, contractions::Vector{IP})
     execsteps = [Contraction(c) for c in contractions]
     en = build_en(tn, g2tt)
     do_steps(en, execsteps)
@@ -63,9 +63,9 @@ end
 naive_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType}) = specified_contract(tn, g2tt, tn.contractions)
 
 function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType})
-    in_edge = in_edge_contractions(tn, g2tt)
-    others = [c for c in setdiff(Set(tn.contractions), Set(in_edge))]
-    contractions = append(in_edge, others)
+    contractions = in_edge_contractions(tn, g2tt)
+    others = [c for c in setdiff(Set(tn.contractions), Set(contractions))]
+    append!(contractions, others)
     specified_contract(tn, g2tt, contractions)
 end
 
@@ -78,12 +78,12 @@ function build_ql(qubits_from_index::Dict{IL, Vector{Int}})
 end
 
 function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
-    lattice_states, amplitudes = Vector{Dict{Int, Int}}(), Vector{Real}()
+    states, amps = Vector{Dict{Int, Int}}(), Vector{Real}()
     for (cidx, amp) in nonzero_pairs(data)
-        push!(lattice_states, get_lattice_state(ql, inds, [Tuple(cidx)...]))
-        push!(amplitudes, amp)
+        push!(states, idxvals2qubitvals(ql, inds, [Tuple(cidx)...]))
+        push!(amps, amp)
     end
-    lattice_states, amplitudes
+    states, amps
 end
 
 ### GEOMETRY HELPERS ###
@@ -100,19 +100,21 @@ rotate(points::Vector{Point2}, θ::Real) = [(cos(θ)*x - sin(θ)*y, sin(θ)*x + 
 # scale points about origin
 scale(points::Vector{Point2}, s::Real) = [(s*x, s*y) for (x, y) in points]
 
-# counterclockwise vertices of an n-gon of circumradius r, center c, and phase θ
+# clockwise vertices of an n-gon of circumradius r, center c, and phase θ
 function regular_polygon(
     n::Int;
     r::Real = 1.0,
     c::Point2 = (0.0, 0.0),
     θ::Real = 0.0,
+    duplicatefirst::Bool = false
 )
-    pts = [(r*cos(θ + 2π*k/n), r*sin(θ + 2π*k/n)) for k in 0:n-1]
+    pts = [(r*cos(θ - 2π*k/n), r*sin(θ - 2π*k/n)) for k in 0:n-1]
+    if duplicatefirst push!(pts, pts[1]) end
     translate(pts, c)
 end
 
 triangle(; kwargs...)  = regular_polygon(3; kwargs...)
-square(; kwargs...)    = regular_polygon(4; phase=π/4, kwargs...)
+square(; kwargs...)    = regular_polygon(4; kwargs...)
 pentagon(; kwargs...)  = regular_polygon(5; kwargs...)
 hexagon(; kwargs...)   = regular_polygon(6; kwargs...)
 
@@ -141,7 +143,7 @@ end
 
 function insert_midpoints(
     pts::Vector{Point2};
-    counts::Vector{Int} = fill(1, length(pts) - 1)
+    counts::Vector{Int} = fill(1, length(pts) - 1),
 )
     n = length(pts)
     n ≥ 2 || error("need at least two points")
@@ -190,9 +192,33 @@ tt2marker(::Type{Vertex}) = :star6
 tt2marker(::Type{Crossing}) = :star4
 tt2marker(::Type{Fusion}) = :star3
 
-color_from_qubit(lattice_state::Dict{Int, Int}) = Dict(q => v == 1 ? :red : :black for (q, v) in lattice_state)
+color_from_qubit(qubitvals::Dict{Int, Int}) = Dict(q => v == 1 ? :red : :black for (q, v) in qubitvals)
 
 position_from_index(indices::Vector{IL}, positions::Vector{Point2}) = Dict(i => positions[i.group] for i in indices)
+
+function calculategridsidelengths(area::Int)
+    width = height = floor(sqrt(area))
+    if width == sqrt(area) return Int(width), Int(height) end
+    width += 1
+    while width * height < area
+        width += 1
+    end
+    Int(width), Int(height)
+end
+
+function getaxisgrid(f, area::Int; args...)
+    w, h = calculategridsidelengths(area)
+    axs = [Axis(f[r, c]; aspect = DataAspect(), args...) for r in 1:h, c in 1:w]
+    w, h, axs
+end
+
+function finalize!(f, axs)
+    for ax in axs
+        hidespines!(ax)
+        hidedecorations!(ax)
+    end
+    resize_to_layout!(f)
+end
 
 function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, DataType})
     groups = sort(collect(keys(g2tt)))
@@ -202,21 +228,39 @@ function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, Data
     
     f = Figure()
     ax = Axis(f[1, 1])
-    hidedecorations!(ax)
-    hidespines!(ax)
     visualize(tn, tnds, ax)
     DataInspector(f, range=30)
-    display(f)
+    finalize!(f, [ax])
+    display(GLMakie.Screen(), f)
 end
 
-function plot(ql::QubitLattice, positions::Vector{Point2}, s::Dict{Int, Int}) 
-    qlds = QubitLatticeDisplaySpec(position_from_index(indices(ql), positions), color_from_qubit(s), 0.5)
+function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, Int}) 
+    qlds = QubitLatticeDisplaySpec(position_from_index(collect(QubitLattices.indices(ql)), positions), color_from_qubit(qubitvals), 0.5)
 
     f = Figure()
     ax = Axis(f[1, 1])
-    hidedecorations!(ax)
-    hidespines!(ax)
     visualize(ql, qlds, ax)
     DataInspector(f, range=30)
-    display(f)
+    finalize!(f, [ax])
+    display(GLMakie.Screen(), f)
+end
+
+function plot(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
+
+end
+
+function calculation(tt2gs::Dict{DataType, Vector{Int}}, contractions::Vector{IP}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
+    # tn construction
+    g2tt = make_g2tt(tt2gs)
+    tn = build_tn(g2tt, contractions)
+    # en construction and execution
+    inds, data = in_edge_first_contract(tn, g2tt)
+    # ql and data extraction
+    ql = build_ql(qubits_from_index)
+    s, a = get_states_and_amps(ql, inds, data)
+    # visualization
+    plot(tn, positions, g2tt)
+    for state in s
+        plot(ql, positions, state)
+    end
 end

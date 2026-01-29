@@ -42,6 +42,9 @@ end
     # check that duplicating an index causes an error
     @test_throws ErrorException add_index!(ql, a1, qubits)
     @test nv(ql.graph) == 1
+
+    # check indices
+    @test Set(QubitLattices.indices(ql)) == Set([a1])
 end
 
 @testset "QubitLattice pairing basics" begin
@@ -77,6 +80,9 @@ end
     
     # check unpaired
     @test Set(ql._unpaired_qubits) == Set([1, 2, 4, 5])
+
+    # check indices
+    @test Set(QubitLattices.indices(ql)) == Set([a1, b2])
 end
 
 @testset "QubitLattice multiple indices" begin
@@ -118,6 +124,9 @@ end
     
     # check unpaired
     @test Set(ql._unpaired_qubits) == Set([4, 5, 6])
+
+    # check indices
+    @test Set(QubitLattices.indices(ql)) == Set([i1, i2, i3])
 end
 
 @testset "QubitLattice extraction basics" begin
@@ -127,14 +136,14 @@ end
 
     # check that correct values are returned and in the right order
     for val in 1:5
-        qs = get_qubit_states(ql, idx, val)
+        qs = idxval2qubitvals(ql, idx, val)
         @test (qs[7], qs[9], qs[1]) == split_index(val)
     end
 
     # add index with shared qubit 7, check that inconsistency errors
     idx2 = IndexLabel(2, :p)
     add_index!(ql, idx2, [7, 4, 2])
-    @test_throws ErrorException get_lattice_state(ql, [idx, idx2], [1, 5])
+    @test_throws ErrorException idxvals2qubitvals(ql, [idx, idx2], [1, 5])
 end
 
 @testset "QubitLattice extraction no unpaired" begin
@@ -159,67 +168,67 @@ end
                     [4, 4, 3, 2], # quadrilateral
                     [5, 4, 3, 5], # nested triangles
                    ]
-    ref_lattices = [
-                    Dict( # all 0
-                         1=>0,
-                         2=>0,
-                         3=>0,
-                         4=>0,
-                         5=>0,
-                         6=>0,
-                        ),
-                    Dict( # big triangle
-                         1=>1,
-                         2=>0,
-                         3=>1,
-                         4=>0,
-                         5=>1,
-                         6=>0,
-                        ),
-                    Dict( # all 1
-                         1=>1,
-                         2=>1,
-                         3=>1,
-                         4=>1,
-                         5=>1,
-                         6=>1,
-                        ),
-                    Dict( # small triangle
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>0,
-                         5=>0,
-                         6=>1,
-                        ),
-                    Dict( # adjacent triangles
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>1,
-                         5=>1,
-                         6=>1,
-                        ),
-                    Dict( # quadrilateral
-                         1=>1,
-                         2=>1,
-                         3=>0,
-                         4=>1,
-                         5=>1,
-                         6=>0,
-                        ),
-                    Dict( # nested triangles
-                         1=>1,
-                         2=>1,
-                         3=>1,
-                         4=>1,
-                         5=>1,
-                         6=>0,
-                        ),
-                   ]
-    for (vals, ref_lattice) in zip(test_indices, ref_lattices)
-        lattice = get_lattice_state(ql, inds, vals)
-        @test lattice == ref_lattice
+    ref_qubitvals = [
+                     Dict( # all 0
+                          1=>0,
+                          2=>0,
+                          3=>0,
+                          4=>0,
+                          5=>0,
+                          6=>0,
+                         ),
+                     Dict( # big triangle
+                          1=>1,
+                          2=>0,
+                          3=>1,
+                          4=>0,
+                          5=>1,
+                          6=>0,
+                         ),
+                     Dict( # all 1
+                          1=>1,
+                          2=>1,
+                          3=>1,
+                          4=>1,
+                          5=>1,
+                          6=>1,
+                         ),
+                     Dict( # small triangle
+                          1=>1,
+                          2=>1,
+                          3=>0,
+                          4=>0,
+                          5=>0,
+                          6=>1,
+                         ),
+                     Dict( # adjacent triangles
+                          1=>1,
+                          2=>1,
+                          3=>0,
+                          4=>1,
+                          5=>1,
+                          6=>1,
+                         ),
+                     Dict( # quadrilateral
+                          1=>1,
+                          2=>1,
+                          3=>0,
+                          4=>1,
+                          5=>1,
+                          6=>0,
+                         ),
+                     Dict( # nested triangles
+                          1=>1,
+                          2=>1,
+                          3=>1,
+                          4=>1,
+                          5=>1,
+                          6=>0,
+                         ),
+                    ]
+    for (vals, ref) in zip(test_indices, ref_qubitvals)
+        qubitvals = idxvals2qubitvals(ql, inds, vals)
+        @test qubitvals == ref
     end
 end
 
@@ -238,26 +247,26 @@ end
                     [1, 1, 1], # all 0
                     [5, 5, 5], # all 1
                    ]
-    ref_lattices = [
-                    Dict( # all 0
-                         1=>0,
-                         2=>0,
-                         3=>0,
-                         4=>0,
-                         5=>0,
-                         6=>0,
-                        ),
-                    Dict( # all 1
-                         1=>1,
-                         2=>1,
-                         3=>1,
-                         4=>1,
-                         5=>1,
-                         6=>1,
-                        ),
-                   ]
-    for (vals, ref_lattice) in zip(test_indices, ref_lattices)
-        lattice = get_lattice_state(ql, inds, vals)
-        @test lattice == ref_lattice
+    ref_qubitvals = [
+                     Dict( # all 0
+                          1=>0,
+                          2=>0,
+                          3=>0,
+                          4=>0,
+                          5=>0,
+                          6=>0,
+                         ),
+                     Dict( # all 1
+                          1=>1,
+                          2=>1,
+                          3=>1,
+                          4=>1,
+                          5=>1,
+                          6=>1,
+                         ),
+                    ]
+    for (vals, ref) in zip(test_indices, ref_qubitvals)
+        qubitvals = idxvals2qubitvals(ql, inds, vals)
+        @test qubitvals == ref
     end
 end
