@@ -34,7 +34,7 @@ function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::Vector{Int})
             # we are assuming that each qubit can be matched to at most two indices
             otherindexnode = ql._node_from_index[only(ql.indices_from_qubit[qubit])]
             add_edge!(ql.graph, nv(ql.graph), otherindexnode)
-            ql._edge_from_qubit[qubit] = Edge(nv(ql.graph), otherindexnode)
+            ql._edge_from_qubit[qubit] = Edge(otherindexnode, nv(ql.graph))
             push!(ql.indices_from_qubit[qubit], idx)
             filter!(!=(qubit), ql._unpaired_qubits)
         else
