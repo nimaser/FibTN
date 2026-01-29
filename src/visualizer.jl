@@ -39,14 +39,14 @@ function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
 end
 
 struct QubitLatticeDisplaySpec
-    index_positions::Dict{IndexLabel, Tuple{Float64, Float64}}
-    qubit_colors::Dict{Int, Symbol}
-    unpaired_qubit_length::Real
+    position_from_index::Dict{IndexLabel, Tuple{Float64, Float64}}
+    color_from_qubit::Dict{Int, Symbol}
+    tail_length::Real
 end
 
 function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     # convert index_positions to map from node to position
-    index_positions = Dict(ql._node_from_index[i] => p for (i, p) in qlds.index_positions)
+    position_from_node = Dict(ql._node_from_index[i] => qlds.pos_from_index[i] for i in keys(ql.qubits_from_index))
     
     # for each unpaired qubit, make a dummy index and node for display
     g = copy(ql.graph) # copy graph so the original is unaltered
@@ -56,9 +56,9 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
         # get the index associated with the qubit, then its node and pos
         idx = only(ql.indices_from_qubit[q])
         n = ql._node_from_index[idx]
-        pos = index_positions[n]
+        pos = position_from_node[n]
         # set pos of the new node to be slightly to the +x of the index
-        index_positions[nv(g)] = (pos[1] + qlds.unpaired_qubit_length, pos[2])
+        position_from_node[nv(g)] = (pos[1] + qlds.tail_length, pos[2])
         # add a new edge to the graph and map to it from the qubit
         add_edge!(g, n, nv(g))
         edge_from_qubit[q] = Edge(n, nv(g))
@@ -67,16 +67,16 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     # convert node position dict to node position array
     node_positions = Vector{Tuple{Float64, Float64}}(undef, nv(g))
     for n in 1:nv(g)
-        node_positions[n] = index_positions[n]
+        node_positions[n] = position_from_node[n]
     end
     
     # convert qubit colors to edge colors
-    edge_colors = Dict{Edge, Symbol}()
+    color_from_edge = Dict{Edge, Symbol}()
     for (qubit, edge) in edge_from_qubit
-        edge_colors[edge] = haskey(qlds.qubit_colors, qubit) ? qlds.qubit_colors[qubit] : :gray
+        color_from_edge[edge] = get(qlds.color_from_qubit, qubit) do; :gray end
     end
 
-    graphplot!(ax, g, layout=node_positions, edge_color=[edge_colors[e] for e in edges(g)])
+    graphplot!(ax, g, layout=node_positions, edge_color=[color_from_edge[e] for e in edges(g)])
 end
 
 end # module Visualizer

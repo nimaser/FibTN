@@ -11,6 +11,5 @@ include("qubitlattices.jl")
 include("visualizer.jl")
 
 include("fibtensortypes.jl")
-include("integrationutils.jl")
 
 end # module FibTN

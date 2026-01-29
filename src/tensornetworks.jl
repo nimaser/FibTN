@@ -53,6 +53,13 @@ function add_contraction!(tn::TensorNetwork, ip::IndexPair)
     tn._index_use_count[ip.b] += 1
 end
 
+tensor_with_group(tn::TensorNetwork, group::Int)
+    for t in tn.tensors
+        if t.group == group return t end
+    end
+    nothing
+end
+
 indices(tn::TensorNetwork) = keys(tn.tensor_with_index)
 
 function find_indices(f::Function, tn::TensorNetwork)
