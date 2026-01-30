@@ -93,24 +93,6 @@ function execute_step!(en::ExecNetwork, c::Contraction)
     new_id = en.next_id
     new_groups = union(eta.groups, etb.groups)
     etz = ExecTensor(new_id, new_groups, new_indices, Z)
-        
-    #print("\n---------------------------------------------------------\n")
-    #print(string(pa) * " " * string(pb))
-    #print("\t" * string(c) * "\n")
-    #print("a\n")
-    #for idx in eta.indices
-    #    print("\t" * string(idx) * "\n")
-    #end
-    #print("--b\n")
-    #for idx in etb.indices
-    #    print("\t" * string(idx) * "\n")
-    #end
-    #print("----z\n")
-    #for idx in etz.indices
-    #    print("\t" * string(idx) * "\n")
-    #end
-    #print(string(deleteat!(copy(eta.indices), pa)) * "\n")
-    #print(string(deleteat!(copy(etb.indices), pb)) * "\n")
     
     # remove old tensors and ids: delete! is idempotent so no issues if we did the trace
     delete!(en.tensor_from_id, ida)
