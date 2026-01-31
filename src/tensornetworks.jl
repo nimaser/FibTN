@@ -1,9 +1,8 @@
 module TensorNetworks
 
 export IndexLabel, IndexContraction, TensorLabel, TensorNetwork
-export add_tensor!, add_contraction!
-
-export tensor_with_group, indices, find_indices, find_indices_by_group, find_indices_by_port, find_index
+export get_indices, get_tensor, get_contraction, find_indices, has_index
+export get_groups, regroup, add_tensor!, add_contraction!, combine!
 
 """
 An IndexLabel is a semantic identifier for a tensor index. It must be
@@ -122,6 +121,10 @@ struct TensorNetwork
     TensorNetwork() = new([], [], Dict(), Dict())
 end
 
+"""Get all groups in this TensorNetwork."""
+get_groups(tn::TensorNetwork)
+    = [t.group for t in tensors]
+
 """Get all IndexLabels belonging to this TensorNetwork."""
 get_indices(tn::TensorNetwork)
     = keys(tn._tensor_with_index)
@@ -191,22 +194,37 @@ function add_contraction!(tn::TensorNetwork, ic::IndexContraction)
 end
 
 """
-Combines two tensor networks to create a single one. Acts like the graph
-sum (disjoint union on graphs):
+Combines two tensor networks into a single one by merging the second
+argument into the first. Acts like graph sum (disjoint union on graphs):
 
 - all TensorLabels and IndexLabels in the second argument are regrouped
 to prevent group number collison with the first argument's TensorLabels
 
 - all existing contractions are preserved, and no new ones are created
 
-Returns the new TensorNetwork and the mapping from old to new group
+Returns the modified TensorNetwork and the mapping from old to new group
 numbers for the second argument's TensorLabels.
 """
-function combine(tn1::TensorNetwork, tn2::TensorNetwork)
-    # rename
-    # rename groups in tn2
-    # rebuild indices
-    # merge tensors and bookkeeping
+function combine!(tn1::TensorNetwork, tn2::TensorNetwork)
+    # get mapping from extant tn2 groups to unused tn1 groups
+    group_map = Dict{Int, Int}()
+    extant_groups = Set(get_groups(tn1))
+    new_group = 1
+    for i in get_groups(tn2)
+        while new_group \in extant_groups new_group += 1 end
+        group_map[i] = new_group
+    end
+    # add tn2 tensors to tn1
+    for (old, new) in group_map
+        add_tensor!(tn1, regroup(get_tensor(tn2, old), new))
+    end
+    # add tn2 contractions to tn1
+    for c in tn2.contractions
+        a = regroup(oldc.a, group_map[oldc.a.group])
+        b = regroup(oldc.b, group_map[oldc.b.group])
+        add_contraction!(tn1, IndexContraction(a, b))
+    end
+    tn1
 end
 
 using SparseArrayKit, TensorOperations
