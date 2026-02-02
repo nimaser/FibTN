@@ -268,4 +268,33 @@ function combine!(tn1::TensorNetwork, tn2::TensorNetwork)
     tn1
 end
 
+"""
+Combines two tensor networks into a single one as in combine!, but then
+also creates contractions between matching IndexLabels in the two
+arguments. For example, suppose tn1 and tn2 both have an IndexLabel with
+group 1 and port :p. In the new tn1, its (1, :p) index will stay the
+same, while the (1, :p) index from tn2 will have been regrouped with the
+rest of its TensorLabel by the combine! operation. However, unlike in
+combine!, there will also be a contraction between that newly regrouped
+index and the (1, :p) index from tn1.
+
+Returns the mapping from old to new group numbers for the second
+argument's TensorLabels, like combine!.
+"""
+function matchcombine!(tn1::TensorNetwork, tn2::TensorNetwork)
+    # find all matching indices
+    matching = Vector{IndexLabel}()
+    for idx in get_indices(tn1)
+        if has_index(tn2, idx) push!(matching, idx) end
+    end
+    # combine the tensor networks
+    group_map = combine!(tn1, tn2)
+    # create contractions
+    for tn1idx in matching
+        tn2idx = regroup(tn1idx, group_map[tn1idx.group])
+        add_contraction!(tn1, IndexContraction(tn1idx, tn2idx))
+    end
+    group_map
+end
+
 end # module TensorNetworks
