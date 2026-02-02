@@ -1,4 +1,4 @@
-using FibTN.Indices
+using FibTN.TensorNetworks
 using FibTN.IndexTriplets
 using FibTN.QubitLattices
 using Graphs

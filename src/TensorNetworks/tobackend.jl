@@ -1,4 +1,4 @@
-module TOExecutionBackend
+module TOBackend
 
 using SparseArrayKit, TensorOperations
 
@@ -193,4 +193,4 @@ function execute_step(es::ExecutionState, qrd::QRDecompStep)
     # TODO
 end
 
-end # module TOExecutionBackend
+end # module TOBackend

@@ -1,15 +1,13 @@
 module FibTN
 
-# include("sparsearrayutils.jl")
+include("TensorNetworks/tensornetworks.jl")
+include("TensorNetworks/tensoroperationsbackend.jl")
+include("TensorNetworks/tensornetworksvisualizer.jl")
 
 include("indextriplets.jl")
-
-include("indices.jl")
-include("tensornetworks.jl")
-include("executor.jl")
-include("qubitlattices.jl")
-include("visualizer.jl")
-
 include("fibtensortypes.jl")
+
+include("qubitlattices.jl")
+include("qubitlatticesvisualizer.jl")
 
 end # module FibTN
