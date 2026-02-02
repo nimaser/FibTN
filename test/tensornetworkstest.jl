@@ -135,19 +135,52 @@ end
     @test length(tn.contractions) == 2
     @test tn._contraction_with_index[a2] == ic2
     @test tn._contraction_with_index[c1] == ic2
+end
 
-    # check getters
-    @test Set(get_groups(tn)) == Set([1, 2])
-    @test Set(get_indices(tn)) == Set([a1, b1, c1, a2])
+@testset "TensorNetwork get" begin
+    # A[a1, b1, c1] * B[a3] * C[b5] with (a1, a3) and (b1, b5) contracted
+    tn = TensorNetwork()
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    c1 = IndexLabel(1, :c)
+    a3 = IndexLabel(3, :a)
+    b5 = IndexLabel(5, :b)
+    
+    tl1 = TensorLabel(1, [a1, b1, c1])
+    tl3 = TensorLabel(3, [a3])
+    tl5 = TensorLabel(5, [b5])
+    
+    add_tensor!(tn, tl1)
+    add_tensor!(tn, tl3)
+    add_tensor!(tn, tl5)
+    
+    ic1 = IndexContraction(a1, a3)
+    ic2 = IndexContraction(b1, b5)
+    
+    add_contraction!(tn, ic1)
+    add_contraction!(tn, ic2)
+    
+    # get groups and indices
+    @test Set(get_groups(tn)) == Set([1, 3, 5])
+    @test Set(get_indices(tn)) == Set([a1, b1, c1, a3, b5])
+    
+    # get tensor
     @test get_tensor(tn, 1) == tl1
-    @test get_tensor(tn, 2) == tl2
+    @test get_tensor(tn, 3) == tl3
+    @test get_tensor(tn, 5) == tl5
     @test get_tensor(tn, a1) == tl1
-    @test get_tensor(tn, a2) == tl2
-    @test get_contraction
-    @test get_contraction(tn, a2) == ic2
+    @test get_tensor(tn, a3) == tl3
+    @test get_tensor(tn, b5) == tl5
+    
+    # get contraction
+    @test get_contraction(tn, a1) == ic1
+    @test get_contraction(tn, a3) == ic1
+    @test get_contraction(tn, b1) == ic2
+    @test get_contraction(tn, b5) == ic2
 end
 
 @testset "TensorNetwork find" begin
+    # A[a1, b1, c1] * B[a3] * C[b5] with (a1, a3) and (b1, b5) contracted
     tn = TensorNetwork()
     a1 = IndexLabel(1, :a)
     b1 = IndexLabel(1, :b)
@@ -162,6 +195,12 @@ end
     add_tensor!(tn, tl1)
     add_tensor!(tn, tl2)
     add_tensor!(tn, tl3)
+    
+    ic1 = IndexContraction(a1, a3)
+    ic2 = IndexContraction(b1, b5)
+    
+    add_contraction!(tn, ic1)
+    add_contraction!(tn, ic2)
     
     # find generic
     @test Set(find_indices(tn) do idx idx.group == 2 || idx.group == 3 end) == Set([a2, b3])
@@ -181,7 +220,7 @@ end
     @test has_index(tn, 2, :b) == false
 end
 
-@testset "TensorNetwork multiple contractions" begin
+@testset "TensorNetwork remove" begin
     # star topology: one central tensor connected to three others
     # C[center1, a1, b1, c1] * A[a2] * B[b3] * C[c4]
     tn = TensorNetwork()
@@ -203,13 +242,69 @@ end
     add_tensor!(tn, tl2)
     add_tensor!(tn, tl3)
     add_tensor!(tn, tl4)
-    
     @test length(tn.tensors) == 4
     
-    add_contraction!(tn, IndexContraction(a1, a2))
-    add_contraction!(tn, IndexContraction(b1, b3))
-    add_contraction!(tn, IndexContraction(c1, c4))
-    
+    add_contraction!(tn, ic1 = IndexContraction(a1, a2))
+    add_contraction!(tn, ic2 = IndexContraction(b1, b3))
+    add_contraction!(tn, ic3 = IndexContraction(c1, c4))
     @test length(tn.contractions) == 3
-    # no specific tests here, just another construction check
+    
+    # can't remove tensor with contractions
+    @test_throws ArgumentError remove_tensor!(tn, tl1)
+    
+    # can remove contractions on a tensor
+    remove_contraction!(tn, ic1)
+    @test_throws get_contraction(tn, a2)
+    
+    # can remove uncontracted tensors
+    remove_tensor!(tn, tl2)
+    @test_throws get_tensor(tn, a2)
+    
+    # can remove all contractions on a tensor
+    remove_contractions!(tn, tl1)
+    @test_throws get_contraction(tn, b1)
+    @test_throws get_contraction(tn, c1)
+    remove_tensor!(tn, tl1)
+end
+
+@testset "TensorNetwork combine!" begin
+    # length 4 MPS-like chain
+    a1 = IndexLabel(1, :a)
+    a2 = IndexLabel(2, :a)
+    a3 = IndexLabel(3, :a)
+    a4 = IndexLabel(4, :a)
+    
+    r1 = IndexLabel(1, :r)
+    l2 = IndexLabel(2, :l)
+    r2 = IndexLabel(2, :r)
+    l3 = IndexLabel(3, :l)
+    r3 = IndexLabel(3, :r)
+    l4 = IndexLabel(4, :l)
+    
+    tl1 = TensorLabel(1, [a1, r1])
+    tl2 = TensorLabel(2, [a2, l2, r2])
+    tl3 = TensorLabel(3, [a3, l3, r3])
+    tl4 = TensorLabel(4, [a4, l4])
+    
+    tn1 = TensorNetwork()
+    add_tensor!(tn1, tl1)
+    add_tensor!(tn1, tl2)
+    add_tensor!(tn1, tl3)
+    add_tensor!(tn1, tl4)
+    
+    add_contraction!(tn1, ic1 = IndexContraction(r1, l2))
+    add_contraction!(tn1, ic2 = IndexContraction(r2, l3))
+    add_contraction!(tn1, ic3 = IndexContraction(r3, l4))
+    
+    # combine!
+    tn2 = deepcopy(tn1)
+    gmap = combine!(tn2, tn1)
+    @test length(tn2.tensors) == 2 * length(tn1.tensors)
+    @test length(tn2.contractions) == 2 * length(tn1.contractions)
+    
+    # matchcombine!
+    tn3 = deepcopy(tn1)
+    gmap = matchcombine!(tn3, tn2)
+    @test length(tn3.tensors) == 3 * length(tn1.tensors)
+    @test length(tn3.contractions) == 3 * length(tn1.contractions) + 4
 end
