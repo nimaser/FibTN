@@ -1,12 +1,15 @@
 module QubitLattices
 
 using Graphs
-using ..Indices
+using ..TensorNetworks
 using ..IndexTriplets
 
-export QubitLattice, add_index!, indices
+export QubitLattice, add_index!, get_indices
 export idxval2qubitvals, idxvals2qubitvals, qubitvals2idxvals
 
+"""
+
+"""
 struct QubitLattice
     qubits_from_index::Dict{IndexLabel, Vector{Int}}
     _node_from_index::Dict{IndexLabel, Int}
@@ -17,6 +20,9 @@ struct QubitLattice
     QubitLattice() = new(Dict(), Dict(), Dict(), Dict(), [], SimpleGraph())
 end
 
+"""
+
+"""
 function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::Vector{Int})
     # check that there are no duplicate qubits or indices
     if haskey(ql.qubits_from_index, idx) error("index $idx already mapped to qubits") end
@@ -45,13 +51,20 @@ function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::Vector{Int})
     end
 end
 
-indices(ql::QubitLattice) = keys(ql.qubits_from_index)
+""""""
+get_indices(ql::QubitLattice) = keys(ql.qubits_from_index)
 
+"""
+
+"""
 function idxval2qubitvals(ql::QubitLattice, idx::IndexLabel, val::Int)
     qvals = split_index(val)
     Dict(q => v for (q, v) in zip(ql.qubits_from_index[idx], qvals))
 end
 
+"""
+
+"""
 function idxvals2qubitvals(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vector{Int})
     qubitvals = Dict{Int, Int}()
     for (idx, val) in zip(inds, vals)
@@ -63,6 +76,9 @@ function idxvals2qubitvals(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vec
     qubitvals
 end
 
+"""
+
+"""
 function qubitvals2idxvals(ql::QubitLattice, qubitvals::Dict{Int, Int})
     inds = Vector{IndexLabel}
     vals = Vector{Int}
