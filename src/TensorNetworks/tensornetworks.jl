@@ -58,7 +58,7 @@ struct IndexContraction
     a::IndexLabel
     b::IndexLabel
     function IndexContraction(a::IndexLabel, b::IndexLabel)
-        if a == b error("labels of contracted indices mustn't match") end
+        if a == b throw(ArgumentError("labels of contracted indices mustn't match")) end
         if b < a a, b = b, a end
         new(a, b)
     end

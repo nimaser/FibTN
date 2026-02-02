@@ -246,7 +246,16 @@ function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, 
 end
 
 function plot(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
+    
+end
 
+function plot_interactive(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
+f, ax, p = graphplot(g, edge_width=4, edge_color=[colorant"black" for i in 1:ne(g)])
+julia> function action(idx, event, axis)
+           p.edge_color[][idx] = rand(RGB)
+           p.edge_color[] = p.edge_color[]
+       end
+julia> register_interaction!(ax, :edgeclick, EdgeClickHandler(action))
 end
 
 function calculation(tt2gs::Dict{DataType, Vector{Int}}, contractions::Vector{IP}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
