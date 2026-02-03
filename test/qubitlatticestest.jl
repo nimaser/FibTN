@@ -44,7 +44,7 @@ end
     @test nv(ql.graph) == 1
 
     # check indices
-    @test Set(QubitLattices.indices(ql)) == Set([a1])
+    @test Set(QubitLattices.get_indices(ql)) == Set([a1])
 end
 
 @testset "QubitLattice pairing basics" begin
@@ -82,7 +82,7 @@ end
     @test Set(ql._unpaired_qubits) == Set([1, 2, 4, 5])
 
     # check indices
-    @test Set(QubitLattices.indices(ql)) == Set([a1, b2])
+    @test Set(QubitLattices.get_indices(ql)) == Set([a1, b2])
 end
 
 @testset "QubitLattice multiple indices" begin
@@ -126,7 +126,7 @@ end
     @test Set(ql._unpaired_qubits) == Set([4, 5, 6])
 
     # check indices
-    @test Set(QubitLattices.indices(ql)) == Set([i1, i2, i3])
+    @test Set(QubitLattices.get_indices(ql)) == Set([i1, i2, i3])
 end
 
 @testset "QubitLattice extraction basics" begin

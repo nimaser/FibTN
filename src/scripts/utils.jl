@@ -1,37 +1,39 @@
-using FibTN.Indices
 using FibTN.TensorNetworks
-using FibTN.Executor
+using FibTN.TensorNetworkVisualizer
+using FibTN.TOBackend
+
 using FibTN.QubitLattices
-using FibTN.Visualizer
+using FibTN.QubitLatticeVisualizer
+
 using FibTN.FibTensorTypes
 
 using GLMakie
-
 using SparseArrayKit
 
 ### INDEX HELPERS ###
 
-const IP = IndexPair
+const IC = IndexContraction
 const IL = IndexLabel
 index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IL(group, p) for p in tensor_ports(T)]
 
 ### TN HELPERS ###
 
-make_g2tt(tt2gs::Dict{DataType, Vector{Int}}) = Dict(g => tt for (tt, gs) in tt2gs for g in gs)
+make_g2tt(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}) =
+    Dict(g => tt for (tt, gs) in tt2gs for g in gs)
 
-function build_tn(g2tt::Dict{Int, DataType}, contractions::Vector{IP})
+function build_tn(g2tt::Dict{Int, Type{<:AbstractFibTensorType}}, contractions::Vector{IC})
     tn = TensorNetwork()
     for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
-    for ip in contractions add_contraction!(tn, ip) end
+    for ic in contractions add_contraction!(tn, ic) end
     tn
 end
 
-function in_edge_contractions(tn::TensorNetwork, g2tt::Dict{Int, DataType})
-    contractions = Vector{IP}()
+function in_edge_contractions(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
+    contractions = Vector{IC}()
     for (g, tt) in g2tt
         if tt ∈ Set([Reflector, Boundary, VacuumLoop])
-            idx = first(tensor_with_group(tn, g).indices)
-            push!(contractions, tn.contraction_with_index[idx])
+            idx = first(TensorNetworks.get_tensor(tn, g).indices)
+            push!(contractions, get_contraction(tn, idx))
         end
     end
     contractions
@@ -42,27 +44,32 @@ pinds(tn::TensorNetwork) = filter(idx -> idx.port == :p, collect(indices(tn)))
 ### CONTRACTION HELPERS ###
 
 function contractionchain(n1::Int, n2::Int, s1::Symbol, s2::Symbol)
-    contractions = [IP(IL(i, s1), IL(i+1, s2)) for i in n1:n2-1]
+    contractions = [IC(IL(i, s1), IL(i+1, s2)) for i in n1:n2-1]
 end
 
 ### EXECUTION HELPERS ###
 
-build_en(tn::TensorNetwork, g2tt::Dict{Int, DataType}) = ExecNetwork(tn, Dict(g=>tensor_data(tt) for (g,tt) in g2tt))
+build_es(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}}) =
+    ExecutionState(tn, Dict(g=>tensor_data(tt) for (g,tt) in g2tt))
 
-do_steps(en::ExecNetwork, execsteps::Vector{<:ExecStep}) = for es in execsteps execute_step!(en, es) end
+do_steps(es::ExecutionState, execsteps::Vector{<:ExecutionStep}) =
+    for step in execsteps execute_step!(es, step) end
 
-fetch_result(en::ExecNetwork) = begin et = execute_step!(en, FetchResult()); et.indices, et.data end
-
-function specified_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType}, contractions::Vector{IP})
-    execsteps = [Contraction(c) for c in contractions]
-    en = build_en(tn, g2tt)
-    do_steps(en, execsteps)
-    fetch_result(en)
+fetch_result(es::ExecutionState) = begin
+    et = es.tensor_from_id[only(get_ids(es))]; et.indices, et.data
 end
 
-naive_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType}) = specified_contract(tn, g2tt, tn.contractions)
+function specified_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}}, contractions::Vector{IC})
+    execsteps = [ContractionStep(c) for c in contractions]
+    es = build_es(tn, g2tt)
+    do_steps(es, execsteps)
+    fetch_result(es)
+end
 
-function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, DataType})
+naive_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}}) =
+    specified_contract(tn, g2tt, tn.contractions)
+
+function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
     contractions = in_edge_contractions(tn, g2tt)
     others = [c for c in setdiff(Set(tn.contractions), Set(contractions))]
     append!(contractions, others)
@@ -220,7 +227,7 @@ function finalize!(f, axs)
     resize_to_layout!(f)
 end
 
-function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, DataType})
+function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
     groups = sort(collect(keys(g2tt)))
     colors = [tt2color(g2tt[g]) for g in groups]
     markers = [tt2marker(g2tt[g]) for g in groups]
@@ -228,39 +235,38 @@ function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, Data
     
     f = Figure()
     ax = Axis(f[1, 1])
-    visualize(tn, tnds, ax)
+    TensorNetworkVisualizer.visualize(tn, tnds, ax)
     DataInspector(f, range=30)
     finalize!(f, [ax])
     display(GLMakie.Screen(), f)
 end
 
-function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, Int}) 
-    qlds = QubitLatticeDisplaySpec(position_from_index(collect(QubitLattices.indices(ql)), positions), color_from_qubit(qubitvals), 0.5)
+function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, Int}, amp::Real) 
+    qlds = QubitLatticeDisplaySpec(position_from_index(collect(QubitLattices.get_indices(ql)), positions), color_from_qubit(qubitvals), 0.5)
 
     f = Figure()
     ax = Axis(f[1, 1])
-    visualize(ql, qlds, ax)
+    QubitLatticeVisualizer.visualize(ql, qlds, ax)
+    ax.title = "$amp"
     DataInspector(f, range=30)
     finalize!(f, [ax])
     display(GLMakie.Screen(), f)
 end
 
-function plot(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
-    
-end
-
 function plot_interactive(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
-f, ax, p = graphplot(g, edge_width=4, edge_color=[colorant"black" for i in 1:ne(g)])
-julia> function action(idx, event, axis)
-           p.edge_color[][idx] = rand(RGB)
-           p.edge_color[] = p.edge_color[]
-       end
-julia> register_interaction!(ax, :edgeclick, EdgeClickHandler(action))
+    qlds = QubitLatticeDisplaySpec(position_from_index(collect(QubitLattices.get_indices(ql)), positions), color_from_qubit(qubitvals), 0.5)
+    
+# f, ax, p = graphplot(g, edge_width=4, edge_color=[colorant"black" for i in 1:ne(g)])
+# julia> function action(idx, event, axis)
+#            p.edge_color[][idx] = rand(RGB)
+#            p.edge_color[] = p.edge_color[]
+#        end
+# julia> register_interaction!(ax, :edgeclick, EdgeClickHandler(action))
 end
 
-function calculation(tt2gs::Dict{DataType, Vector{Int}}, contractions::Vector{IP}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
+function calculation(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}, contractions::Vector{IC}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
     # tn construction
-    g2tt = make_g2tt(tt2gs)
+    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = make_g2tt(tt2gs)
     tn = build_tn(g2tt, contractions)
     # en construction and execution
     inds, data = in_edge_first_contract(tn, g2tt)
@@ -269,7 +275,7 @@ function calculation(tt2gs::Dict{DataType, Vector{Int}}, contractions::Vector{IP
     s, a = get_states_and_amps(ql, inds, data)
     # visualization
     plot(tn, positions, g2tt)
-    for state in s
-        plot(ql, positions, state)
+    for (state, amp) in zip(s, a)
+        plot(ql, positions, state, amp)
     end
 end
