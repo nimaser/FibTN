@@ -4,6 +4,8 @@ using FibTN.TensorNetworks
 using FibTN.FibTensorTypes
 using FibTN.QubitLattices
 
+include("utils.jl")
+
 function tail_triangle()
     # tensors
     tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
@@ -28,7 +30,7 @@ end
 
 function tail_triangle_trivial_boundary()
     # tensors
-    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}  = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
                  Reflector      => [2, 4, 6, 8],
                  Boundary       => [7],
                  Tail           => [1, 3, 5],
@@ -51,7 +53,7 @@ end
 
 function tail_triangle_trivial_boundary_vacuum_loop()
     # tensors
-    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}  = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
                  Reflector      => [2, 4, 6, 8, 10],
                  Boundary       => [7],
                  VacuumLoop     => [9],
@@ -75,7 +77,7 @@ end
 
 function two_triangles()
     # tensors
-    tt2gs = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
                  Reflector      => [2, 4, 6, 8, 10, 12, 14, 15],
                  Boundary       => [13],
                  VacuumLoop     => [3, 7],
@@ -104,7 +106,20 @@ function two_triangles()
     calculation(tt2gs, contractions, qubits_from_index, positions)
 end
 
+function lattice(w::Int, h::Int)
+    h % 2 == 1 || throw(ArgumentError("height must be odd"))
+    # bottom
+    b = TensorNetwork()
+    
+    for i in 1:(4*w+1)
+    
+    # middle bottom
+    
+    
+    # middle top
 
+    
+    # top
 
 function two_hexagons()
     tt2gs = Dict(

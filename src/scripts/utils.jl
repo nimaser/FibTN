@@ -239,6 +239,7 @@ function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, Type
     DataInspector(f, range=30)
     finalize!(f, [ax])
     display(GLMakie.Screen(), f)
+    ax
 end
 
 function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, Int}, amp::Real) 
@@ -251,6 +252,7 @@ function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, 
     DataInspector(f, range=30)
     finalize!(f, [ax])
     display(GLMakie.Screen(), f)
+    ax
 end
 
 function plot_interactive(ql::QubitLattice, positions::Vector{Point2}, states::Vector{Dict{Int, Int}})
