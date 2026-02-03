@@ -1,5 +1,6 @@
 module QubitLatticesVisualizer
 
+using ..TensorNetworks
 using ..QubitLattices
 using Graphs
 using GLMakie

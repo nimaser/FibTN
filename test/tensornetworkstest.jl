@@ -1,4 +1,5 @@
 using FibTN.TensorNetworks
+using FibTN.TensorNetworks: get_indices
 
 @testset "IndexLabel basics" begin
     # IndexLabel construction
@@ -185,16 +186,16 @@ end
     a1 = IndexLabel(1, :a)
     b1 = IndexLabel(1, :b)
     c1 = IndexLabel(1, :c)
-    a2 = IndexLabel(2, :a)
-    b3 = IndexLabel(3, :b)
+    a3 = IndexLabel(3, :a)
+    b5 = IndexLabel(5, :b)
     
     tl1 = TensorLabel(1, [a1, b1, c1])
-    tl2 = TensorLabel(2, [a2])
-    tl3 = TensorLabel(3, [b3])
+    tl3 = TensorLabel(3, [a3])
+    tl5 = TensorLabel(5, [b5])
     
     add_tensor!(tn, tl1)
-    add_tensor!(tn, tl2)
     add_tensor!(tn, tl3)
+    add_tensor!(tn, tl5)
     
     ic1 = IndexContraction(a1, a3)
     ic2 = IndexContraction(b1, b5)
@@ -203,21 +204,21 @@ end
     add_contraction!(tn, ic2)
     
     # find generic
-    @test Set(find_indices(tn) do idx idx.group == 2 || idx.group == 3 end) == Set([a2, b3])
+    @test Set(find_indices(tn) do idx idx.group == 3 || idx.group == 5 end) == Set([a3, b5])
     
     # find by group
     @test Set(find_indices(tn, 1)) == Set([a1, b1, c1])
-    @test Set(find_indices(tn, 2)) == Set([a2])
-    @test Set(find_indices(tn, 3)) == Set([b3])
+    @test Set(find_indices(tn, 3)) == Set([a3])
+    @test Set(find_indices(tn, 5)) == Set([b5])
     
     # find by port
-    @test Set(find_indices(tn, :a)) == Set([a1, a2])
-    @test Set(find_indices(tn, :b)) == Set([b1, b3])
+    @test Set(find_indices(tn, :a)) == Set([a1, a3])
+    @test Set(find_indices(tn, :b)) == Set([b1, b5])
     @test Set(find_indices(tn, :c)) == Set([c1])
     
     # has_index
-    @test has_index(tn, 1, :a) == true
-    @test has_index(tn, 2, :b) == false
+    @test has_index(tn, IndexLabel(1, :a)) == true
+    @test has_index(tn, IndexLabel(3, :b)) == false
 end
 
 @testset "TensorNetwork remove" begin
@@ -244,9 +245,12 @@ end
     add_tensor!(tn, tl4)
     @test length(tn.tensors) == 4
     
-    add_contraction!(tn, ic1 = IndexContraction(a1, a2))
-    add_contraction!(tn, ic2 = IndexContraction(b1, b3))
-    add_contraction!(tn, ic3 = IndexContraction(c1, c4))
+    ic1 = IndexContraction(a1, a2)
+    ic2 = IndexContraction(b1, b3)
+    ic3 = IndexContraction(c1, c4)
+    add_contraction!(tn, ic1)
+    add_contraction!(tn, ic2)
+    add_contraction!(tn, ic3)
     @test length(tn.contractions) == 3
     
     # can't remove tensor with contractions
@@ -254,16 +258,16 @@ end
     
     # can remove contractions on a tensor
     remove_contraction!(tn, ic1)
-    @test_throws get_contraction(tn, a2)
+    @test_throws KeyError get_contraction(tn, a2)
     
     # can remove uncontracted tensors
     remove_tensor!(tn, tl2)
-    @test_throws get_tensor(tn, a2)
+    @test_throws KeyError get_tensor(tn, a2)
     
     # can remove all contractions on a tensor
     remove_contractions!(tn, tl1)
-    @test_throws get_contraction(tn, b1)
-    @test_throws get_contraction(tn, c1)
+    @test_throws KeyError get_contraction(tn, b1)
+    @test_throws KeyError get_contraction(tn, c1)
     remove_tensor!(tn, tl1)
 end
 
@@ -292,9 +296,12 @@ end
     add_tensor!(tn1, tl3)
     add_tensor!(tn1, tl4)
     
-    add_contraction!(tn1, ic1 = IndexContraction(r1, l2))
-    add_contraction!(tn1, ic2 = IndexContraction(r2, l3))
-    add_contraction!(tn1, ic3 = IndexContraction(r3, l4))
+    ic1 = IndexContraction(r1, l2)
+    ic2 = IndexContraction(r2, l3)
+    ic3 = IndexContraction(r3, l4)
+    add_contraction!(tn1, ic1)
+    add_contraction!(tn1, ic2)
+    add_contraction!(tn1, ic3)
     
     # combine!
     tn2 = deepcopy(tn1)

@@ -1,7 +1,7 @@
 module FibTN
 
 include("TensorNetworks/tensornetworks.jl")
-include("TensorNetworks/tensoroperationsbackend.jl")
+include("TensorNetworks/tobackend.jl")
 include("TensorNetworks/tensornetworksvisualizer.jl")
 
 include("indextriplets.jl")

@@ -2,8 +2,9 @@ module TensorNetworks
 
 export IndexLabel, IndexContraction, TensorLabel, TensorNetwork
 export get_indices, get_tensor, get_contraction, find_indices, has_index
-export add_tensor!, add_contraction!, remove_tensor! remove_contraction!
-export get_groups, regroup, combine!
+export add_tensor!, add_contraction!
+export remove_tensor!, remove_contraction!, remove_contractions!
+export get_groups, regroup, combine!, matchcombine!
 
 """
 An IndexLabel is a semantic identifier for a tensor index. It must be
@@ -37,8 +38,8 @@ struct IndexLabel
 end
 
 """Lexicographic total order, with group more important than port."""
-Base.isless(a::IndexLabel, b::IndexLabel)
-    = a.group < b.group || (a.group == b.group && a.port < b.port)
+Base.isless(a::IndexLabel, b::IndexLabel) =
+    a.group < b.group || (a.group == b.group && a.port < b.port)
     
 """Returns an IndexLabel with the same port but specified group."""
 regroup(il::IndexLabel, group::Int) = IndexLabel(group, il.port)
@@ -84,7 +85,7 @@ struct TensorLabel
     """the indices that belong to this tensor"""
     indices::Vector{IndexLabel}
     function TensorLabel(group::Int, indices::Vector{IndexLabel})
-        length(indices) == length(unique(indices)) || throw(ArgumentError("duplicate IndexLabel")
+        length(indices) == length(unique(indices)) || throw(ArgumentError("duplicate IndexLabel"))
         for idx in indices
             idx.group == group || throw(ArgumentError("TensorLabel and IndexLabel group mismatch: $group vs $(idx.group)"))
         end
@@ -97,8 +98,8 @@ Returns a new TensorLabel with its and its IndexLabels' group numbers
 changed to the provided value. IndexLabel ordering and ports are
 preserved.
 """
-regroup(tl::TensorLabel, group::Int)
-    = TensorLabel(group, [regroup(il, group) for il in tl.indices])
+regroup(tl::TensorLabel, group::Int) =
+    TensorLabel(group, [regroup(il, group) for il in tl.indices])
 
 """
 A TensorNetwork is a lightweight symbolic representation of a tensor
@@ -123,24 +124,26 @@ struct TensorNetwork
 end
 
 """Get all groups in this TensorNetwork."""
-get_groups(tn::TensorNetwork)
-    = [t.group for t in tensors]
+get_groups(tn::TensorNetwork) =
+    [t.group for t in tn.tensors]
 
 """Get all IndexLabels belonging to this TensorNetwork."""
-get_indices(tn::TensorNetwork)
-    = keys(tn._tensor_with_index)
+get_indices(tn::TensorNetwork) =
+    keys(tn._tensor_with_index)
     
 """Get a TensorLabel from an IndexLabel which it owns."""
-get_tensor(tn::TensorNetwork, il::IndexLabel)
-    = tn._tensor_with_index[il]
+get_tensor(tn::TensorNetwork, il::IndexLabel) =
+    tn._tensor_with_index[il]
 
 """Get a TensorLabel from its group number."""
-get_tensor(tn::TensorNetwork, group::Int)
-    = for t in tn.tensors t.group == group && return t end; throw(KeyError(group))
+get_tensor(tn::TensorNetwork, group::Int) = begin
+    for t in tn.tensors t.group == group && return t end
+   throw(KeyError(group))
+end
     
 """Get an IndexContraction from an IndexLabel which it owns."""
-get_contraction(tn::TensorNetwork, il::IndexLabel)
-    = tn._contraction_with_index[il]
+get_contraction(tn::TensorNetwork, il::IndexLabel) =
+    tn._contraction_with_index[il]
 
 """Get all IndexLabels for which `f` returns true."""
 function find_indices(f::Function, tn::TensorNetwork)
@@ -152,16 +155,16 @@ function find_indices(f::Function, tn::TensorNetwork)
 end
 
 """Get all IndexLabels with group `group`."""
-find_indices(tn::TensorNetwork, group::Int)
-    = find_indices(idx -> idx.group == group, tn)
+find_indices(tn::TensorNetwork, group::Int) =
+    find_indices(idx -> idx.group == group, tn)
     
 """Get all IndexLabels with port `port`."""
-find_indices(tn::TensorNetwork, port::Symbol)
-    = find_indices(idx -> idx.port == port, tn)
+find_indices(tn::TensorNetwork, port::Symbol) =
+    find_indices(idx -> idx.port == port, tn)
     
 """Return whether `tn` has the IndexLabel `il`."""
-has_index(tn::TensorNetwork, il::IndexLabel)
-    = !empty(find_indices(idx -> il.group == idx.group && il.port == idx.port, tn))
+has_index(tn::TensorNetwork, il::IndexLabel) =
+    !isempty(find_indices(idx -> il.group == idx.group && il.port == idx.port, tn))
     
 """
 Adds the TensorLabel `tl` to the TensorNetwork `tn`, ensuring that all
@@ -215,7 +218,7 @@ contraction is not present, throws an error.
 """
 function remove_contraction!(tn::TensorNetwork, ic::IndexContraction)
     # check that contraction exists
-    ic \in tn.contractions || throw(ArgumentError("contraction $ic not in tensor network"))
+    ic ∈ tn.contractions || throw(ArgumentError("contraction $ic not in tensor network"))
     # remove it
     filter!(!=(ic), tn.contractions)
     delete!(tn._contraction_with_index, ic.a)
@@ -252,20 +255,22 @@ function combine!(tn1::TensorNetwork, tn2::TensorNetwork)
     extant_groups = Set(get_groups(tn1))
     new_group = 1
     for i in get_groups(tn2)
-        while new_group \in extant_groups new_group += 1 end
+        while new_group ∈ extant_groups new_group += 1 end
         group_map[i] = new_group
+        push!(extant_groups, new_group)
     end
     # add tn2 tensors to tn1
     for (old, new) in group_map
         add_tensor!(tn1, regroup(get_tensor(tn2, old), new))
     end
     # add tn2 contractions to tn1
-    for c in tn2.contractions
+    for oldc in tn2.contractions
         a = regroup(oldc.a, group_map[oldc.a.group])
         b = regroup(oldc.b, group_map[oldc.b.group])
         add_contraction!(tn1, IndexContraction(a, b))
     end
-    tn1
+    @show group_map
+    group_map
 end
 
 """
@@ -278,18 +283,24 @@ rest of its TensorLabel by the combine! operation. However, unlike in
 combine!, there will also be a contraction between that newly regrouped
 index and the (1, :p) index from tn1.
 
+Note that contractions are only formed between matching and uncontracted
+IndexLabels: IndexLabels which are already contracted internally within
+tn1 or tn2 will not have their contractions affected.
+
 Returns the mapping from old to new group numbers for the second
 argument's TensorLabels, like combine!.
 """
 function matchcombine!(tn1::TensorNetwork, tn2::TensorNetwork)
-    # find all matching indices
+    # find all matching indices that are not yet contracted
     matching = Vector{IndexLabel}()
     for idx in get_indices(tn1)
+        if haskey(tn1._contraction_with_index, idx) continue end
         if has_index(tn2, idx) push!(matching, idx) end
     end
     # combine the tensor networks
     group_map = combine!(tn1, tn2)
     # create contractions
+    @show matching
     for tn1idx in matching
         tn2idx = regroup(tn1idx, group_map[tn1idx.group])
         add_contraction!(tn1, IndexContraction(tn1idx, tn2idx))

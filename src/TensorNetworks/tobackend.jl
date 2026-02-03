@@ -1,6 +1,7 @@
 module TOBackend
 
 using SparseArrayKit, TensorOperations
+using ..TensorNetworks
 
 export ExecutionTensor, ExecutionState, ExecutionStep, execute_step!
 export ContractionStep, FetchResultStep
@@ -81,20 +82,20 @@ mutable struct ExecutionState
 end
 
 """Get all ids in this ExecutionState."""
-get_ids(es::ExecutionState)
-    = keys(es.tensor_from_id)
+get_ids(es::ExecutionState) =
+    keys(es.tensor_from_id)
     
 """Get all indices in this ExecutionState."""
-get_indices(es::ExecutionState)
-    = keys(es.id_from_index)
+get_indices(es::ExecutionState) =
+    keys(es.id_from_index)
     
 """Get all ExecutionTensors resulting from the specified group."""
-get_tensors(es::ExecutionState, group::Int)
-    = [et for (_, et) in es.tensor_from_id if group \in et.groups]
+get_tensors(es::ExecutionState, group::Int) =
+    [et for (_, et) in es.tensor_from_id if group ∈ et.groups]
     
 """Get the ExecutionTensor containing the specified IndexLabel."""
-get_tensor(es::ExecutionState, il::IndexLabel)
-    = es.tensor_from_id[es.id_from_index[il]]
+get_tensor(es::ExecutionState, il::IndexLabel) =
+    es.tensor_from_id[es.id_from_index[il]]
 
 """
 Represents a single numeric tensor manipulation step.
