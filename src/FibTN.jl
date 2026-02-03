@@ -6,6 +6,8 @@ include("TensorNetworks/tensornetworkvisualizer.jl")
 
 include("indextriplets.jl")
 include("fibtensortypes.jl")
+include("fibtensornetworks.jl")
+include("segments.jl")
 
 include("qubitlattices.jl")
 include("qubitlatticevisualizer.jl")

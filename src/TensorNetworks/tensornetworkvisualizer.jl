@@ -38,11 +38,13 @@ displays the contracted indices while hovering over a tensor displays
 its group number.
 """
 function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
+    # convert positions to dict
+    positions = Dict(g => p for (g, p) in zip(tnds.groups, tnds.positions))
     # get endpoints of edges, and plot linesegments using them
     edge_endpoints = []
     for c in tn.contractions
-        pos1 = tnds.positions[c.a.group]
-        pos2 = tnds.positions[c.b.group]
+        pos1 = positions[c.a.group]
+        pos2 = positions[c.b.group]
         push!(edge_endpoints, (pos1, pos2))
     end
     segmentsresult = linesegments!(ax, edge_endpoints, color=:gray)

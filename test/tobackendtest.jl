@@ -15,7 +15,7 @@ using SparseArrayKit, TensorOperations
     tn = TensorNetwork()
     add_tensor!(tn, tl1)
     add_tensor!(tn, tl2)
-    
+
     # check construction
     A1 = [1.0 2.0; 3.0 4.0]
     A2 = [5.0 6.0; 7.0 8.0]
@@ -23,13 +23,16 @@ using SparseArrayKit, TensorOperations
     @test length(es.tensor_from_id) == 2
     @test es._next_id == 3
 
+    # check construction without providing data arrays
+    @test_throws ArgumentError ExecutionState(tn, Dict{Int, SparseArray}())
+
     # check indices and data
     et1, et2 = es.tensor_from_id[1], es.tensor_from_id[2]
     @test et1.indices == [a1, b1]
     @test et2.indices == [a2, b2]
     @test et1.data == A1
     @test et2.data == A2
-    
+
     # get
     @test Set(get_ids(es)) == Set([1, 2])
     @test Set(TOBackend.get_indices(es)) == Set([a1, b1, a2, b2])
@@ -39,7 +42,32 @@ using SparseArrayKit, TensorOperations
     @test TOBackend.get_tensor(es, IndexLabel(2, :a)) == et2
 end
 
-@testset "ExecutionState single contraction" begin
+@testset "ExecutionState PermuteIndicesStep" begin
+    tn = TensorNetwork()
+    i = IndexLabel(1, :i)
+    j = IndexLabel(1, :j)
+    k = IndexLabel(1, :k)
+    add_tensor!(tn, TensorLabel(1, [i, j, k]))
+    # simple 2×3×4 tensor
+    data = reshape(1:24, 2, 3, 4)
+    es = ExecutionState(tn, Dict(1 => data))
+    # permute (i, j, k) → (k, i, j)
+    execute_step!(es, PermuteIndicesStep(1, [k, i, j]))
+    # check result
+    et = es.tensor_from_id[only(get_ids(es))]
+    @test et.indices == [k, i, j]
+    @test size(et.data) == (4, 2, 3)
+    @test et.data == permutedims(data, (3, 1, 2))
+
+    # must provide enough indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j]))
+    # can't provide duplicate indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, j]))
+    # must provide valid indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, IndexLabel(2, :a)]))
+end
+
+@testset "ExecutionState ContractionStep I" begin
     # A[i,j] * B[j,k] -> C[i,k]
     i = IndexLabel(1, :i)
     j1 = IndexLabel(1, :j)
@@ -71,13 +99,13 @@ end
     @test et.id == 3
     @test et.groups == Set([1, 2])
     @test et.indices == [i, k]
-    
+
     # check calculation via @tensor
     @tensor C[a,c] := A[a,b] * B[b,c]
     @test Array(et.data) ≈ C
 end
 
-@testset "ExecutionState multiple contraction" begin
+@testset "ExecutionState ContractionStep II" begin
     # A[i,j] * B[j,k] * C[k,l] -> D[i,l]
     i = IndexLabel(1, :i)
     j1 = IndexLabel(1, :j)

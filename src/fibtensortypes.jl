@@ -6,9 +6,10 @@ using ..IndexTriplets
 using TensorKitSectors
 const qdim = TensorKitSectors.dim # to avoid name conflict
 
-export AbstractFibTensorType
-export Reflector, Boundary, VacuumLoop, Tail, Vertex, Crossing, Fusion, End, Excitation, DoubledFusion
-export tensor_ports, tensor_data
+export AbstractFibTensorType, tensor_ports, tensor_data
+export Reflector, Boundary, VacuumLoop, Tail
+export Vertex, Crossing, Fusion
+export End, Excitation, DoubledFusion
 
 ### UTILS ###
 
@@ -27,16 +28,18 @@ end
 
 abstract type AbstractFibTensorType end
 
-struct Reflector        <: AbstractFibTensorType end
-struct Boundary         <: AbstractFibTensorType end
-struct VacuumLoop       <: AbstractFibTensorType end
-struct Tail             <: AbstractFibTensorType end
-struct Vertex           <: AbstractFibTensorType end
-struct Crossing         <: AbstractFibTensorType end
-struct Fusion           <: AbstractFibTensorType end
-struct End              <: AbstractFibTensorType end
-struct Excitation       <: AbstractFibTensorType end
-struct DoubledFusion    <: AbstractFibTensorType end
+struct Reflector            <: AbstractFibTensorType end
+struct Boundary             <: AbstractFibTensorType end
+struct VacuumLoop           <: AbstractFibTensorType end
+struct Tail                 <: AbstractFibTensorType end
+
+struct Vertex               <: AbstractFibTensorType end
+struct Crossing             <: AbstractFibTensorType end
+struct Fusion               <: AbstractFibTensorType end
+
+struct End                  <: AbstractFibTensorType end
+struct Excitation           <: AbstractFibTensorType end
+struct DoubledFusion        <: AbstractFibTensorType end
 
 ### TENSOR INDEX DATA ###
 
@@ -110,7 +113,7 @@ function generate_tensor_data(::Type{VacuumLoop})
             μ, i, ν = split_index(a)
             ν2, i2, μ2 = split_index(b)
             if μ != μ2 || ν != ν2 || i != i2 continue end
-            arr[a, b] = μ == 0 ? 1 : ϕ
+            arr[a, b] = ν == 0 ? 1 : ϕ
         end
     end
     arr

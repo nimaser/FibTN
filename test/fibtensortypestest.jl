@@ -4,18 +4,18 @@ using FibTN.FibTensorTypes
     # verify that multiple calls return the same object (caching)
     # and that the index and tensor data are returned without errors
     # and that the dimensions match the number of indices
-    
+
     # for some tensors also check the data
     tensortypes = [Reflector, Boundary, VacuumLoop, Tail, Vertex, Crossing, Fusion]
 
     ϕ = (1 + √5) / 2
-    
+
     reflectordata = [1 0 0 0 0;
                      0 0 0 1 0;
                      0 0 1 0 0;
                      0 1 0 0 0;
                      0 0 0 0 1]
-                     
+
     boundarydata = [1 0 0 0 0;
                     0 0 0 0 0;
                     0 0 0 0 0;
@@ -23,9 +23,9 @@ using FibTN.FibTensorTypes
                     0 0 0 0 0]
 
     vacuumloopdata = [1 0 0 0 0;
-                      0 0 0 1 0;
+                      0 0 0 ϕ 0;
                       0 0 ϕ 0 0;
-                      0 ϕ 0 0 0;
+                      0 1 0 0 0;
                       0 0 0 0 ϕ]
 
     taildata = zeros(Float64, 5, 5, 5)
@@ -40,7 +40,7 @@ using FibTN.FibTensorTypes
                       VacuumLoop => vacuumloopdata,
                       Tail => taildata,
                       )
-    
+
     for tt in tensortypes
         ips = tensor_ports(tt)
         td1 = tensor_data(tt)

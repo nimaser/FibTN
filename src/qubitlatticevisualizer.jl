@@ -14,14 +14,14 @@ number to color. Also has a parameter controlling how long tails
 (which are only associated with one index, and thus have a free node)
 should be.
 """
-struct QubitLatticeDisplaySpec
+mutable struct QubitLatticeDisplaySpec
     position_from_index::Dict{IndexLabel, Tuple{Float64, Float64}}
     color_from_qubit::Dict{Int, Symbol}
     tail_length::Real
 end
 
 """
-Plots a 
+Plots a
 """
 function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     # convert index_positions to map from node to position
@@ -48,11 +48,13 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     end
     # convert qubit colors to edge colors
     color_from_edge = Dict{Edge, Symbol}()
+    width_from_edge = Dict{Edge, Real}()
     for (qubit, edge) in edge_from_qubit
         color_from_edge[edge] = get(qlds.color_from_qubit, qubit) do; :gray end
+        width_from_edge[edge] = get(color_from_edge, edge) do; :gray end == :red ? 20 : 1
     end
     # plot the graph
-    p = graphplot!(ax, g, layout=node_positions, edge_color=[color_from_edge[e] for e in edges(g)])
+    p = graphplot!(ax, g, layout=node_positions, edge_color=[color_from_edge[e] for e in edges(g)], edge_wdith=[width_from_edge[e] for e in edges(g)])
     autolimits!(ax)
     p
 end
