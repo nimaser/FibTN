@@ -110,7 +110,7 @@ end
     @test length(es.tensor_from_id) == 2
     @test es._next_id == 5
     # second contraction
-    execute_step!(es, ContractionStep(IndexContraction, k2)))
+    execute_step!(es, ContractionStep(IndexContraction, k2))
     @test length(es.tensor_from_id) == 1
     @test es._next_id == 6
     # check result

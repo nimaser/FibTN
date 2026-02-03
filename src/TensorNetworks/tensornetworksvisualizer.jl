@@ -24,7 +24,7 @@ struct TensorNetworkDisplaySpec
         )
         lg, lp, lc, lm = length(g), length(p), length(c), length(m)
         if lg != lp != lc != lm
-            throw(ArgumentError("lengths of all arguments must be the same, got $(lg, lp, lc, lm)"))
+            throw(ArgumentError("lengths of all arguments must be the same, got $((lg, lp, lc, lm))"))
         end
         new(g, p, c, m)
     end
