@@ -1,4 +1,4 @@
-module TensorNetworksVisualizer
+module TensorNetworkVisualizer
 
 using ..TensorNetworks
 using GLMakie
@@ -60,4 +60,4 @@ function visualize(tn::TensorNetwork, tnds::TensorNetworkDisplaySpec, ax::Axis)
     segmentsresult, scatterresult
 end
 
-end # module TensorNetworksVisualizer
+end # module TensorNetworkVisualizer

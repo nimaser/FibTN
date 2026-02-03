@@ -1,22 +1,18 @@
-using FibTN.Indices
-const IP = IndexPair
+const IC = IndexContraction
 const IL = IndexLabel
 using FibTN.TensorNetworks
 using FibTN.FibTensorTypes
 using FibTN.QubitLattices
-using FibTN.Visualizer
-
-include("integrationutils.jl")
 
 function tail_triangle()
     # tensors
-    tt2gs = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
                  Reflector      => [2, 4, 6],
                  Tail           => [1, 3, 5],
                 )
     # contractions
     contractions = contractionchain(1, 6, :b, :a)
-    push!(contractions, IP(IL(6, :b), IL(1, :a)))
+    push!(contractions, IC(IL(6, :b), IL(1, :a)))
     # qubits
     qubits_from_index = Dict(
                              IL(1, :p) => [3, 4, 1],
@@ -32,14 +28,14 @@ end
 
 function tail_triangle_trivial_boundary()
     # tensors
-    tt2gs = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}  = Dict(
                  Reflector      => [2, 4, 6, 8],
                  Boundary       => [7],
                  Tail           => [1, 3, 5],
                 )
     # contractions
     contractions = contractionchain(1, 8, :b, :a)
-    push!(contractions, IP(IL(8, :b), IL(1, :a)))
+    push!(contractions, IC(IL(8, :b), IL(1, :a)))
     # qubits
     qubits_from_index = Dict(
                              IL(1, :p) => [3, 4, 1],
@@ -55,7 +51,7 @@ end
 
 function tail_triangle_trivial_boundary_vacuum_loop()
     # tensors
-    tt2gs = Dict(
+    tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}  = Dict(
                  Reflector      => [2, 4, 6, 8, 10],
                  Boundary       => [7],
                  VacuumLoop     => [9],
@@ -63,7 +59,7 @@ function tail_triangle_trivial_boundary_vacuum_loop()
                 )
     # contractions
     contractions = contractionchain(1, 10, :b, :a)
-    push!(contractions, IP(IL(10, :b), IL(1, :a)))
+    push!(contractions, IC(IL(10, :b), IL(1, :a)))
     # qubits
     qubits_from_index = Dict(
                              IL(1, :p) => [3, 4, 1],
@@ -88,9 +84,9 @@ function two_triangles()
                 )
     # contractions
     contractions = contractionchain(1, 14, :b, :a)
-    push!(contractions, IP(IL(14, :b), IL(1, :a)))
-    push!(contractions, IP(IL(11, :c), IL(15, :a)))
-    push!(contractions, IP(IL(15, :b), IL(5, :c)))
+    push!(contractions, IC(IL(14, :b), IL(1, :a)))
+    push!(contractions, IC(IL(11, :c), IL(15, :a)))
+    push!(contractions, IC(IL(15, :b), IL(5, :c)))
     
     # qubits
     qubits_from_index = Dict(

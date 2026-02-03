@@ -1,4 +1,4 @@
-module QubitLatticesVisualizer
+module QubitLatticeVisualizer
 
 using ..TensorNetworks
 using ..QubitLattices
@@ -57,4 +57,4 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     p
 end
 
-end # module QubitLatticesVisualizer
+end # module QubitLatticeVisualizer

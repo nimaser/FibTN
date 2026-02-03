@@ -102,7 +102,7 @@ end
     B = [5.0 6.0; 7.0 8.0]
     C = [9.0 0.0; 1.0 2.0]
 
-    es = ExecutionStsate(tn, Dict(1 => A, 2 => B, 3 => C))
+    es = ExecutionState(tn, Dict(1 => A, 2 => B, 3 => C))
     @test length(es.tensor_from_id) == 3
     @test es._next_id == 4
     # first contraction
@@ -110,7 +110,7 @@ end
     @test length(es.tensor_from_id) == 2
     @test es._next_id == 5
     # second contraction
-    execute_step!(es, ContractionStep(IndexContraction, k2))
+    execute_step!(es, ContractionStep(IndexContraction(k1, k2)))
     @test length(es.tensor_from_id) == 1
     @test es._next_id == 6
     # check result
