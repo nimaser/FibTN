@@ -1,5 +1,4 @@
 using FibTN.TensorNetworks
-using FibTN.TensorNetworks: get_indices
 
 @testset "IndexLabel basics" begin
     # IndexLabel construction
@@ -163,15 +162,15 @@ end
     
     # get groups and indices
     @test Set(get_groups(tn)) == Set([1, 3, 5])
-    @test Set(get_indices(tn)) == Set([a1, b1, c1, a3, b5])
+    @test Set(TensorNetworks.get_indices(tn)) == Set([a1, b1, c1, a3, b5])
     
     # get tensor
-    @test get_tensor(tn, 1) == tl1
-    @test get_tensor(tn, 3) == tl3
-    @test get_tensor(tn, 5) == tl5
-    @test get_tensor(tn, a1) == tl1
-    @test get_tensor(tn, a3) == tl3
-    @test get_tensor(tn, b5) == tl5
+    @test TensorNetworks.get_tensor(tn, 1) == tl1
+    @test TensorNetworks.get_tensor(tn, 3) == tl3
+    @test TensorNetworks.get_tensor(tn, 5) == tl5
+    @test TensorNetworks.get_tensor(tn, a1) == tl1
+    @test TensorNetworks.get_tensor(tn, a3) == tl3
+    @test TensorNetworks.get_tensor(tn, b5) == tl5
     
     # get contraction
     @test get_contraction(tn, a1) == ic1
@@ -262,7 +261,7 @@ end
     
     # can remove uncontracted tensors
     remove_tensor!(tn, tl2)
-    @test_throws KeyError get_tensor(tn, a2)
+    @test_throws KeyError TensorNetworks.get_tensor(tn, a2)
     
     # can remove all contractions on a tensor
     remove_contractions!(tn, tl1)
