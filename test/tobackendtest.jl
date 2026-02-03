@@ -21,7 +21,7 @@ using SparseArrayKit, TensorOperations
     A2 = [5.0 6.0; 7.0 8.0]
     es = ExecutionState(tn, Dict(1 => A1, 2 => A2))
     @test length(es.tensor_from_id) == 2
-    @test en._next_id == 3
+    @test es._next_id == 3
 
     # check indices and data
     et1, et2 = es.tensor_from_id[1], es.tensor_from_id[2]
@@ -32,11 +32,11 @@ using SparseArrayKit, TensorOperations
     
     # get
     @test Set(get_ids(es)) == Set([1, 2])
-    @test Set(get_indices(es)) == Set([a1, b1, a2, b2])
+    @test Set(TOBackend.get_indices(es)) == Set([a1, b1, a2, b2])
     @test get_tensors(es, 1) == [et1]
     @test get_tensors(es, 2) == [et2]
-    @test get_tensor(es, IndexLabel(1, :a)) == et1
-    @test get_tensor(es, IndexLabel(2, :a)) == et2
+    @test TOBackend.get_tensor(es, IndexLabel(1, :a)) == et1
+    @test TOBackend.get_tensor(es, IndexLabel(2, :a)) == et2
 end
 
 @testset "ExecutionState single contraction" begin
@@ -52,7 +52,7 @@ end
     tn = TensorNetwork()
     add_tensor!(tn, tlA)
     add_tensor!(tn, tlB)
-    add_contraction!(tn, IndexPair(j1, j2))
+    add_contraction!(tn, IndexContraction(j1, j2))
 
     A = [1.0 2.0; 3.0 4.0]
     B = [5.0 6.0; 7.0 8.0]

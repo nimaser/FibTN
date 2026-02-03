@@ -269,7 +269,6 @@ function combine!(tn1::TensorNetwork, tn2::TensorNetwork)
         b = regroup(oldc.b, group_map[oldc.b.group])
         add_contraction!(tn1, IndexContraction(a, b))
     end
-    @show group_map
     group_map
 end
 
@@ -300,7 +299,6 @@ function matchcombine!(tn1::TensorNetwork, tn2::TensorNetwork)
     # combine the tensor networks
     group_map = combine!(tn1, tn2)
     # create contractions
-    @show matching
     for tn1idx in matching
         tn2idx = regroup(tn1idx, group_map[tn1idx.group])
         add_contraction!(tn1, IndexContraction(tn1idx, tn2idx))

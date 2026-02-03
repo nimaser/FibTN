@@ -4,6 +4,7 @@ using SparseArrayKit, TensorOperations
 using ..TensorNetworks
 
 export ExecutionTensor, ExecutionState, ExecutionStep, execute_step!
+export get_ids, get_indices, get_tensors, get_tensor
 export ContractionStep, FetchResultStep
 
 """
@@ -63,7 +64,7 @@ mutable struct ExecutionState
             haskey(tensordata_from_group, g) || throw(ArgumentError("missing data for TensorLabel with group $group"))
         end
         # initialize fields
-        tensor_from_id = Dict{Int, ExecTensor}()
+        tensor_from_id = Dict{Int, ExecutionTensor}()
         id_from_index = Dict{IndexLabel, Int}()
         _next_id = 1
         # convert TensorLabels to ExecutionTensors
@@ -73,7 +74,7 @@ mutable struct ExecutionState
                                  copy(tl.indices),
                                  tensordata_from_group[tl.group],
                                 )
-            tensor_from_id[next_id] = et
+            tensor_from_id[_next_id] = et
             for index in tl.indices id_from_index[index] = _next_id end
             _next_id += 1
         end
@@ -181,7 +182,7 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
     es.tensor_from_id[new_id] = etz
     for idx in new_indices es.id_from_index[idx] = new_id end
     # update overall id counter
-    en._next_id += 1
+    es._next_id += 1
         
     return nothing
 end
