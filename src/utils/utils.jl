@@ -10,42 +10,8 @@ using FibTN.FibTensorTypes
 using GLMakie
 using SparseArrayKit
 
-### INDEX HELPERS ###
-
-const IC = IndexContraction
-const IL = IndexLabel
-index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IL(group, p) for p in tensor_ports(T)]
-
-### TN HELPERS ###
-
-make_g2tt(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}) =
-    Dict(g => tt for (tt, gs) in tt2gs for g in gs)
-
-function build_tn(g2tt::Dict{Int, Type{<:AbstractFibTensorType}}, contractions::Vector{IC})
-    tn = TensorNetwork()
-    for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
-    for ic in contractions add_contraction!(tn, ic) end
-    tn
-end
-
-function in_edge_contractions(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
-    contractions = Vector{IC}()
-    for (g, tt) in g2tt
-        if tt ∈ Set([Reflector, Boundary, VacuumLoop])
-            idx = first(TensorNetworks.get_tensor(tn, g).indices)
-            push!(contractions, get_contraction(tn, idx))
-        end
-    end
-    contractions
-end
-    
-pinds(tn::TensorNetwork) = filter(idx -> idx.port == :p, collect(indices(tn)))
-
-### CONTRACTION HELPERS ###
-
-function contractionchain(n1::Int, n2::Int, s1::Symbol, s2::Symbol)
-    contractions = [IC(IL(i, s1), IL(i+1, s2)) for i in n1:n2-1]
-end
+include("geometry.jl")
+include("fibtensornetworks.jl")
 
 ### EXECUTION HELPERS ###
 
@@ -69,12 +35,12 @@ end
 naive_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}}) =
     specified_contract(tn, g2tt, tn.contractions)
 
-function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
-    contractions = in_edge_contractions(tn, g2tt)
-    others = [c for c in setdiff(Set(tn.contractions), Set(contractions))]
-    append!(contractions, others)
-    specified_contract(tn, g2tt, contractions)
-end
+#function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
+#    contractions = in_edge_contractions(tn, g2tt)
+#    others = [c for c in setdiff(Set(tn.contractions), Set(contractions))]
+#    append!(contractions, others)
+#    specified_contract(tn, g2tt, contractions)
+#end
 
 ### QL HELPERS ###
 
@@ -91,94 +57,6 @@ function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::S
         push!(amps, amp)
     end
     states, amps
-end
-
-### GEOMETRY HELPERS ###
-
-# basic 2D point type alias
-const Point2 = NTuple{2, Float64}
-
-# translate a set of points
-translate(points::Vector{Point2}, c::Point2) = [(x + c[1], y + c[2]) for (x, y) in points]
-
-# rotate points about origin
-rotate(points::Vector{Point2}, θ::Real) = [(cos(θ)*x - sin(θ)*y, sin(θ)*x + cos(θ)*y) for (x, y) in points]
-
-# scale points about origin
-scale(points::Vector{Point2}, s::Real) = [(s*x, s*y) for (x, y) in points]
-
-# clockwise vertices of an n-gon of circumradius r, center c, and phase θ
-function regular_polygon(
-    n::Int;
-    r::Real = 1.0,
-    c::Point2 = (0.0, 0.0),
-    θ::Real = 0.0,
-    duplicatefirst::Bool = false
-)
-    pts = [(r*cos(θ - 2π*k/n), r*sin(θ - 2π*k/n)) for k in 0:n-1]
-    if duplicatefirst push!(pts, pts[1]) end
-    translate(pts, c)
-end
-
-triangle(; kwargs...)  = regular_polygon(3; kwargs...)
-square(; kwargs...)    = regular_polygon(4; kwargs...)
-pentagon(; kwargs...)  = regular_polygon(5; kwargs...)
-hexagon(; kwargs...)   = regular_polygon(6; kwargs...)
-
-# n points uniformly spaced from a to b (inclusive)
-function line_segment(a::Point2, b::Point2, n::Int)
-    [( (1-t)*a[1] + t*b[1], (1-t)*a[2] + t*b[2] )
-     for t in range(0, 1; length=n)]
-end
-
-# generate n points in a zig-zag line
-function zigzag(
-    n::Int;
-    step::Real = 1.0,
-    amplitude::Real = 1.0,
-    origin::Point2 = (0.0, 0.0),
-)
-    pts = Vector{Point2}(undef, n)
-    for i in 1:n
-        x = step * (i-1)
-        y = amplitude * ((i-1) % 2)
-        pts[i] = (x, y)
-    end
-    translate(pts, origin)
-    pts
-end
-
-function insert_midpoints(
-    pts::Vector{Point2};
-    counts::Vector{Int} = fill(1, length(pts) - 1),
-)
-    n = length(pts)
-    n ≥ 2 || error("need at least two points")
-    length(counts) == n - 1 || error("counts must have length length(pts)-1")
-
-    out = Point2[]
-    push!(out, pts[1])
-
-    for i in 1:n-1
-        (x1, y1) = pts[i]
-        (x2, y2) = pts[i+1]
-        k = counts[i]
-
-        Δx = x2 - x1
-        Δy = y2 - y1
-        for j in 1:k
-            t = j / (k + 1)
-
-            push!(out, (
-                        x1 + Δx * t,
-                        y1 + Δy * t,
-                       )
-                 )
-        end
-
-        push!(out, float.(pts[i+1]))
-    end
-    out
 end
 
 ### POST PROCESSING ###
@@ -265,6 +143,8 @@ function plot_interactive(ql::QubitLattice, positions::Vector{Point2}, states::V
 #        end
 # julia> register_interaction!(ax, :edgeclick, EdgeClickHandler(action))
 end
+
+### INTEGRATION ###
 
 function calculation(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}, contractions::Vector{IC}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
     # tn construction

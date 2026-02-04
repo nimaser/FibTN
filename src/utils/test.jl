@@ -106,61 +106,6 @@ function two_triangles()
     calculation(tt2gs, contractions, qubits_from_index, positions)
 end
 
-function lattice(w::Int, h::Int)
-    h % 2 == 1 || throw(ArgumentError("height must be odd"))
-    # bottom
-    b = TensorNetwork()
+function minimal_periodic()
+    # tensors
     
-    for i in 1:(4*w+1)
-    
-    # middle bottom
-    
-    
-    # middle top
-
-    
-    # top
-
-function two_hexagons()
-    tt2gs = Dict(
-                 Reflector        => [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 23, 25, 27],
-                 Boundary         => [21],
-                 VacuumLoop       => [24, 26],
-                 Tail             => [3, 5, 7, 9, 13, 15, 17, 19],
-                 Vertex           => [1, 11],
-                )
-    positions = [
-        (0, 1),
-        (1, 2),
-        (2, 3),
-        (3, 2),
-        (4, 1),
-        (4, 0),
-        (4, -1),
-        (3, -2),
-        (2, -3),
-        (1, -2),
-        (0, -1),
-        (-1, -2),
-        (-2, -3),
-        (-3, -2),
-        (-4, -1),
-        (-4, 0),
-        (-4, 1),
-        (-3, 2),
-        (-2, 3),
-        (-1, 2),
-        (0, 0),
-    ]
-    contractions = contractionchain(1, 22, :b, :a)
-    push!(contractions, (22, :b) => (1, :a))
-    push!(contractions, (1, :c) => (23, :a))
-    append!(contractions, contractionchain(23, 25, :b, :a))
-    push!(contractions, (25, :b) => (26, :b), (26, :a) => (27, :a))
-    push!(contractions, (27, :b) => (11, :c))
-    
-    g2tt = make_g2tt(tt2gs)
-    tn = build_tn(g2tt, contractions)
-    inds, data = dumb_contract_tn(tn, g2tt)
-    plot(tn, positions, g2tt)
-end
