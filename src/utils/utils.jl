@@ -11,7 +11,10 @@ using GLMakie
 using SparseArrayKit
 
 include("geometry.jl")
-include("fibtensornetworks.jl")
+
+function contractionchain(n1::Int, n2::Int, s1::Symbol, s2::Symbol)
+    contractions = [IC(IL(i, s1), IL(i+1, s2)) for i in n1:n2-1]
+end
 
 ### EXECUTION HELPERS ###
 
@@ -34,13 +37,6 @@ end
 
 naive_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}}) =
     specified_contract(tn, g2tt, tn.contractions)
-
-#function in_edge_first_contract(tn::TensorNetwork, g2tt::Dict{Int, Type{<:AbstractFibTensorType}})
-#    contractions = in_edge_contractions(tn, g2tt)
-#    others = [c for c in setdiff(Set(tn.contractions), Set(contractions))]
-#    append!(contractions, others)
-#    specified_contract(tn, g2tt, contractions)
-#end
 
 ### QL HELPERS ###
 
@@ -148,10 +144,12 @@ end
 
 function calculation(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}, contractions::Vector{IC}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
     # tn construction
-    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = make_g2tt(tt2gs)
-    tn = build_tn(g2tt, contractions)
+    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = Dict(g => tt for (tt, gs) in tt2gs for g in gs)
+    tn = TensorNetwork()
+    for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
+    for ic in contractions add_contraction!(tn, ic) end
     # en construction and execution
-    inds, data = in_edge_first_contract(tn, g2tt)
+    inds, data = naive_contract(tn, g2tt)
     # ql and data extraction
     ql = build_ql(qubits_from_index)
     s, a = get_states_and_amps(ql, inds, data)
@@ -161,3 +159,5 @@ function calculation(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}, co
         plot(ql, positions, state, amp)
     end
 end
+
+include("fibtensornetworks.jl")

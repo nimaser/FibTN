@@ -9,29 +9,58 @@ const GridPosition = NTuple{2, Int}
 struct Segment
     start::Int
     finish::Int
-    hasamp::Bool
     x::Int
     y::Int
     pos::GridPosition
-    function Segment(start::Int, x::Int, y::Int; hasamp::Bool=true)
-        finish = start + (hasamp ? 6 : 4)
-        new(start, finish, hasamp, x, y, (x, y))
+    hastail::Bool
+    hasvacuumloop::Bool
+    starttype::Union{Nothing, Tail, Vertex}
+    finishtype::Union{Nothing, Tail, Vertex}
+    throughconnected::Bool
+    function Segment(start::Int, x::Int, y::Int;
+        hastail::Bool=true,
+        hasvacuumloop::Bool=true,
+        starttype::Union{Nothing, Tail, Vertex}=Vertex,
+        finishtype::Union{Nothing, Tail, Vertex}=Vertex,
+        throughconnected::Bool=true,
+    )
+        # validity checks
+        starttype != nothing || finishtype != nothing || throw(ArgumentError("start and finish types cannot both be nothing"))
+        if starttype == nothing
+            finishtype != Vertex || throw(ArgumentError("finish cannot be Vertex if start is nothing"))
+            !hastail && !hasvacuumloop || throw(ArgumentError("cannot have middle tensors if start is nothing"))
+            !throughconnected || throw(ArgumentError("cannot be throughconnected if start is nothing"))
+            finish = start
+            return new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
+        end
+        if finishtype == nothing
+            starttype != Vertex || throw(ArgumentError("start cannot be Vertex if finish is nothing"))
+            !hastail && !hasvacuumloop throw(ArgumentError("cannot have middle tensors if finish is nothing"))
+            !throughconnected || throw(ArgumentError("cannot be throughconnected if start is nothing"))
+            finish = start
+            return new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
+        end
+        if !throughconnected && starttype == Vertex && finishtype == Vertex
+            throw(ArgumentError("must be through connected if both top and bottom are Vertex"))
+        end
+        # construction
+        finish = start + 1 # group number of bottom tensor in the segment
+        if throughconnected finish += 1 end # first reflector
+        if hastail finish += 2 end          # tail and reflector
+        if hasvacuumloop finish += 2 end    # vacuum loop and reflector
+        new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
     end
 end
 
 get_groups(s::Segment) = s.start:s.finish
 num_groups(s::Segment) = s.finish - s.start + 1
 
-get_group(s::Segment, ::Type{Tail}) = s.start + 2
-get_group(s::Segment, ::Type{VacuumLoop}) =
-    s.hasamp ? s.start + 4 : throw(ArgumentError("provided segment has no vacuum loop tensor"))
-
 struct FibTensorNetwork
     tn::TensorNetwork
     tensortype_from_group::Dict{Int, Type{<:AbstractFibTensorType}}
     segments::Vector{Segment}
     segment_from_position::Dict{GridPosition, Segment}
-    FibTensorNetwork() = new(TensorNetwork(), Dict())
+    FibTensorNetwork() = new(TensorNetwork(), Dict(), [], Dict())
 end
 
 function get_segment(ftn::FibTensorNetwork, group::Int)
@@ -43,25 +72,51 @@ end
 
 function _add_tensor!(ftn::FibTensorNetwork, group::Int, ::Type{T}) where T <: AbstractFibTensorType
     index_labels = [IL(group, p) for p in tensor_ports(T)]
-    tensortype_from_group[group] = T
+    ftn.tensortype_from_group[group] = T
     add_tensor!(ftn.tn, TensorLabel(group, index_labels))
 end
 
-function add_segment!(ftn::FibTensorNetwork, start::Int, x::Int, y::Int; hasamp::Bool = true)
-    # add vertices at top and bottom
-    finish = start + (amp ? 6 : 4)
-    _add_tensor!(ftn, start, Vertex)
-    _add_tensor!(ftn, finish, Vertex)
+function add_segment!(ftn::FibTensorNetwork, s::Segment, )
+    # put segment in ftn
+    push!(ftn.segments, s)
+    ftn.segment_from_position[s.pos] = s
+    # add tensors at top and bottom
+    if s.starttype != nothing _add_tensor!(ftn, s.start, s.starttype) end
+    if s.finishtype != nothing _add_tensor!(ftn, s.finish, s.finishtype) end
     # add tensors in the middle
-    _add_tensor!(ftn, start + 1, Reflector)
-    _add_tensor!(ftn, start + 2, Tail)
-    _add_tensor!(ftn, start + 3, Reflector)
-    # add amplitude tensor
-    if hasamp
-        _add_tensor!(ftn, start + 4, VacuumLoop)
-        _add_tensor!(ftn, start + 5, Reflector)
+    counter = 1
+    if s.hastail
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+        _add_tensor!(ftn, s.start + counter, Tail); Counter += 1
     end
+    if s.hasvacuumloop
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+        _add_tensor!(ftn, s.start + counter, VacuumLoop); counter += 1
+    end
+    if s.starttype != nothing && s.finishtype != nothing && s.throughconnected
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+    end
+    # sanity check that the group numbers line up as expected
+    s.start + counter == s.finish || error("group numbers misaligned while creating segment")
+    # contractions
+    if !s.throughconnected return end
     # add contractions from top to middle
+    counter = 1
+    startidx = s.starttype == Vertex IL(start, :c)
+    if s.hastail
+        add_contraction!(ftn.tn, IC(IL(start, :c), IL(start+1, :a)))
+        add_contraction!(ftn.tn, IC(IL(start+1, :b), IL(start+2, :a)))
+        add_contraction!(ftn.tn, IC(IL(start+2, :b), IL(start+3, :a)))
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+        _add_tensor!(ftn, s.start + counter, Tail); Counter += 1
+    end
+    if s.hasvacuumloop
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+        _add_tensor!(ftn, s.start + counter, VacuumLoop); counter += 1
+    end
+    if s.starttype != nothing && s.finishtype != nothing && s.throughconnected
+        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
+    end
     add_contraction!(ftn.tn, IC(IL(start, :c), IL(start+1, :a)))
     add_contraction!(ftn.tn, IC(IL(start+1, :b), IL(start+2, :a)))
     add_contraction!(ftn.tn, IC(IL(start+2, :b), IL(start+3, :a)))
@@ -72,14 +127,7 @@ function add_segment!(ftn::FibTensorNetwork, start::Int, x::Int, y::Int; hasamp:
     end
     # add final contraction from middle to bottom
     add_contraction!(ftn.tn, IC(IL(finish-1, :b), IL(finish, :c)))
-    # create segment and add to ftn
-    s = Segment(start, x, y; hasamp=hasamp)
-    push!(ftn.segments, s)
-    ftn.segment_from_pos[(x, y)] = s
 end
-
-add_segment!(ftn::FibTensorNetwork, start::Int, pos::GridPosition; hasamp::Bool = true) =
-    add_segment!(ftn, start, pos[1], pos[2]; hasamp=hasamp)
     
 function connect_segments!(ftn::FibTensorNetwork, pos1::GridPosition, pos2::GridPosition, group::Int; enable_adjacency_check::Bool=true, dir::Symbol=:x)
     if enable_adjacency_check
@@ -87,8 +135,8 @@ function connect_segments!(ftn::FibTensorNetwork, pos1::GridPosition, pos2::Grid
         xdiff = pos1[1] - pos2[1]
         ydiff = pos1[2] - pos2[2]
         xdiff == 0 || ydiff == 0 || throw(ArgumentError("positions are diagonal"))
-        if xdiff < 0 pos1, pos2, xdiff, dir = pos2, pos1, -xdiff :h end
-        if ydiff < 0 pos1, pos2, ydiff, dir = pos2, pos1, -ydiff :v end
+        if xdiff < 0 pos1, pos2, xdiff, dir = pos2, pos1, -xdiff, :h end
+        if ydiff < 0 pos1, pos2, ydiff, dir = pos2, pos1, -ydiff, :v end
         xdiff == 1 || ydiff == 1 || throw(ArgumentError("positions aren't directly adjacent"))
     else
         dir == :h || dir == :v || throw(ArgumentError("dir must be specified if adjacency check disabled"))
@@ -96,6 +144,14 @@ function connect_segments!(ftn::FibTensorNetwork, pos1::GridPosition, pos2::Grid
     # fetch segments
     s1 = ftn.segment_from_position[pos1]
     s2 = ftn.segment_from_position[pos2]
+    @show pos1, s1.start
+    @show pos2, s2.start
+    @show group, dir
+    @show IC(IL(s1.finish, :a), IL(group, :a))
+    @show IC(IL(group, :b), IL(s2.start, :a))
+    @show IC(IL(s1.start, :b), IL(group, :a))
+    @show IC(IL(group, :b), IL(s2.finish, :b))
+    print("\n")
     # add reflector
     _add_tensor!(ftn, group, Reflector)
     # add contractions depending on relative segment orientations
@@ -103,25 +159,33 @@ function connect_segments!(ftn::FibTensorNetwork, pos1::GridPosition, pos2::Grid
         add_contraction!(ftn.tn, IC(IL(s1.finish, :a), IL(group, :a)))
         add_contraction!(ftn.tn, IC(IL(group, :b), IL(s2.start, :a)))
     else
-        add_contraction!(ftn.tn, IC(IL(s1.start, :b), IL(group, :a)))
-        add_contraction!(ftn.tn, IC(IL(group, :b), IL(s2.finish, :b)))
+        add_contraction!(ftn.tn, IC(IL(s1.finish, :b), IL(group, :a)))
+        add_contraction!(ftn.tn, IC(IL(group, :b), IL(s2.start, :b)))
     end
 end
 
-function grid(w::Int, h::Int)
+function grid_periodic(w::Int, h::Int)
     ftn = FibTensorNetwork()
+    positions::Dict{Int, Point2}()
     new_group = 1
     # make all of the segments
     for i in 1:w
         for j in 1:h
-            add_segment!(ftn, new_group, w, h)
-            new_group = ftn.segment_from_position[(w, h)].finish + 1
+            add_segment!(ftn, new_group, i, j)
+            s = ftn.segment_from_position[(i, j)]
+            new_group = s.finish + 1
+            # insert points
+            points = insert_midpoints([(i - 0.1, j - 0.1), (i + 0.1, j + 0.1)]; counts=[s.finish - s.start - 1])
+            for (g, p) in zip(s.start:s.finish, points)
+                positions[g] = p
+            end
         end
     end
     # connect internal rows
     for i in 1:w-1
         for j in 1:h
             connect_segments!(ftn, (i, j), (i+1, j), new_group)
+            positions[new_group] = (i+0.5, j)
             new_group += 1
         end
     end
@@ -129,6 +193,7 @@ function grid(w::Int, h::Int)
     for j in 1:h-1
         for i in 1:w
             connect_segments!(ftn, (i, j), (i, j+1), new_group)
+            positions[new_group] = (i, j+0.5)
             new_group += 1
         end
     end
@@ -170,5 +235,114 @@ function grid(w::Int, h::Int)
     for il in TensorNetworks.get_indices(ftn.tn)
         if il.port == :p add_index!(ql, get_qubit_mapping(il)) end
     end
-    ftn, ql
+    positions = Dict(g => (4*p[1], 4*p[2]) for (g, p) in positions)
+    ftn, ql, positions
+end
+
+function grid_bounded(w::Int, h::Int)
+    ftn = FibTensorNetwork()
+    positions = Dict{Int, Point2}()
+    new_group = 1
+    # make segments
+    for i in 1:w, j in 1:h
+        add_segment!(ftn, new_group, i, j)
+        s = ftn.segment_from_position[(i,j)]
+        new_group = s.finish + 1
+        # insert points
+        points = insert_midpoints([(i + 0.1, j + 0.1), (i - 0.1, j - 0.1)]; counts=[s.finish - s.start - 1])
+        for (g, p) in zip(s.start:s.finish, points)
+            positions[g] = p
+        end
+    end
+    
+    #plot(ftn.tn, [positions[g] for g in 1:new_group-1], ftn.tensortype_from_group)
+
+    # connect internal rows and cols
+    for i in 1:w-1, j in 1:h
+        connect_segments!(ftn, (i,j), (i+1,j), new_group)
+        positions[new_group] = (i+0.5, j)
+        new_group += 1
+    end
+    for j in 1:h-1, i in 1:w
+        connect_segments!(ftn, (i,j), (i,j+1), new_group)
+        positions[new_group] = (i, j+0.5)
+        new_group += 1
+    end
+    
+    plot(ftn.tn, [positions[g] for g in 1:new_group-1], ftn.tensortype_from_group)
+
+    # --- right boundary (i = w) ---
+    for j in 1:h-1
+        s1 = ftn.segment_from_position[(w,j+1)]
+        s2 = ftn.segment_from_position[(w,j)]
+        _add_tensor!(ftn, new_group, Reflector)
+        @show s1.start, s2.start
+        add_contraction!(ftn.tn, IC(IL(s1.start,:b), IL(new_group,:a)))
+        add_contraction!(ftn.tn, IC(IL(new_group,:b), IL(s2.start,:b)))
+        positions[g] = (w + 0.35, j + 0.5)
+        new_group += 1
+    end
+
+    # --- left boundary (i = 1) ---
+    for j in 1:h-1
+        s1 = ftn.segment_from_position[(1,j+1)]
+        s2 = ftn.segment_from_position[(1,j)]
+        g = new_group; new_group += 1
+        _add_tensor!(ftn, g, Reflector)
+        add_contraction!(ftn.tn, IC(IL(s1.finish,:b), IL(g,:b)))
+        add_contraction!(ftn.tn, IC(IL(g,:a), IL(s2.finish,:b)))
+        positions[g] = (1 - 0.35, j + 0.5)
+    end
+
+    # --- top boundary (j = h) ---
+    for i in 1:w-1
+        s1 = ftn.segment_from_position[(i+1,h)]
+        s2 = ftn.segment_from_position[(i,h)]
+        g = new_group; new_group += 1
+        _add_tensor!(ftn, g, Reflector)
+        add_contraction!(ftn.tn, IC(IL(s1.start,:a), IL(g,:b)))
+        add_contraction!(ftn.tn, IC(IL(g,:a), IL(s2.start,:a)))
+        positions[g] = (i + 0.5, h + 0.35)
+    end
+
+    # --- bottom boundary (j = 1) ---
+    for i in 1:w-1
+        s1 = ftn.segment_from_position[(i+1,1)]
+        s2 = ftn.segment_from_position[(i,1)]
+        g = new_group; new_group += 1
+        _add_tensor!(ftn, g, Reflector)
+        add_contraction!(ftn.tn, IC(IL(s1.finish,:a), IL(g,:a)))
+        add_contraction!(ftn.tn, IC(IL(g,:b), IL(s2.finish,:a)))
+        positions[g] = (i + 0.5, 1 - 0.35)
+    end
+
+    # --- qubit lattice ---
+    function get_qubit_mapping(il::IndexLabel)
+        s = get_segment(ftn, il.group)
+        i, j = s.pos
+        if s.start == il.group
+            q1 = w*h + (j-1)*w + i
+            q2 = (j-1)*w + i
+            q3 = 2*w*h + 3*((j-1)*w + i-1) + 1
+            return [q1, q2, q3]
+        elseif get_group(s, Tail) == il.group
+            q1 = 2*w*h + 3*((j-1)*w + i-1) + 1
+            q2 = 2*w*h + 3*((j-1)*w + i-1) + 2
+            q3 = 2*w*h + 3*((j-1)*w + i-1) + 3
+            return [q1, q2, q3]
+        elseif s.finish == il.group
+            q1 = w*h + ((j == h ? 1 : j+1)-1)*w + i
+            q2 = (j-1)*w + (i == 1 ? w : i-1)
+            q3 = 2*w*h + 3*((j-1)*w + i-1) + 3
+            return [q1, q2, q3]
+        else
+            error("IndexLabel provided doesn't belong to a physical index")
+        end
+    end
+    ql = QubitLattice()
+    #for il in TensorNetworks.get_indices(ftn.tn)
+    #    if il.port == :p add_index!(ql, get_qubit_mapping(il)) end
+    #end
+    #positions = Dict(g => (4*p[1], 4*p[2]) for (g, p) in positions)
+    ftn, ql, positions
 end
