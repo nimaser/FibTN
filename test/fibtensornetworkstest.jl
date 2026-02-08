@@ -1,13 +1,30 @@
-using FibTN.TensorNetworks
 using FibTN.FibTensorTypes
-using FibTN.QubitLattices
+using FibTN.TOBackend
+using FibTN.FibTensorNetworks
 
-const IC = IndexContraction
-const IL = IndexLabel
+@testset "FibTensorNetworks basics" begin
+# TODO
+end
 
-include("utils.jl")
+function calculation(tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}}, contractions::Vector{IC}, qubits_from_index::Dict{IndexLabel, Vector{Int}}, positions::Vector{Point2})
+    # tn construction
+    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = Dict(g => tt for (tt, gs) in tt2gs for g in gs)
+    tn = TensorNetwork()
+    for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
+    for ic in contractions add_contraction!(tn, ic) end
+    # en construction and execution
+    inds, data = naive_contract(tn, g2tt)
+    # ql and data extraction
+    ql = build_ql(qubits_from_index)
+    s, a = get_states_and_amps(ql, inds, data)
+    # visualization
+    plot(tn, positions, g2tt)
+    for (state, amp) in zip(s, a)
+        plot(ql, positions, state, amp)
+    end
+end
 
-function tail_triangle()
+@testset "FibTensorNetworks tail_triangle" begin
     # tensors
     tt2gs::Dict{Type{<:AbstractFibTensorType}, Vector{Int}} = Dict(
                  Reflector      => [2, 4, 6],
@@ -90,7 +107,7 @@ function two_triangles()
     push!(contractions, IC(IL(14, :b), IL(1, :a)))
     push!(contractions, IC(IL(11, :c), IL(15, :a)))
     push!(contractions, IC(IL(15, :b), IL(5, :c)))
-    
+
     # qubits
     qubits_from_index = Dict(
                              IL(1, :p) => [1, 2, 3],
@@ -102,30 +119,7 @@ function two_triangles()
     positions = insert_midpoints(square(duplicatefirst=true); counts=[3, 3, 1, 3])
     pop!(positions)
     push!(positions, insert_midpoints([positions[5], positions[11]]; counts=[1])[2])
-    
+
     # calculate result and display
     calculation(tt2gs, contractions, qubits_from_index, positions)
 end
-
-index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IL(group, p) for p in tensor_ports(T)]
-
-function lattice_calculation(w::Int, h::Int)
-    ftn, ql, positions = grid_bounded(w, h)
-    # tn construction
-    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = Dict(g => tt for (tt, gs) in tt2gs for g in gs)
-    tn = TensorNetwork()
-    for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
-    for ic in contractions add_contraction!(tn, ic) end
-    # en construction and execution
-    inds, data = naive_contract(tn, g2tt)
-    # ql and data extraction
-    ql = build_ql(qubits_from_index)
-    s, a = get_states_and_amps(ql, inds, data)
-    # visualization
-    plot(tn, positions, g2tt)
-    for (state, amp) in zip(s, a)
-        plot(ql, positions, state, amp)
-    end
-end
-    
-    

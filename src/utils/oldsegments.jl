@@ -6,129 +6,6 @@ const IL = IndexLabel
 
 const GridPosition = NTuple{2, Int}
 
-struct Segment
-    start::Int
-    finish::Int
-    x::Int
-    y::Int
-    pos::GridPosition
-    hastail::Bool
-    hasvacuumloop::Bool
-    starttype::Union{Nothing, Tail, Vertex}
-    finishtype::Union{Nothing, Tail, Vertex}
-    throughconnected::Bool
-    function Segment(start::Int, x::Int, y::Int;
-        hastail::Bool=true,
-        hasvacuumloop::Bool=true,
-        starttype::Union{Nothing, Tail, Vertex}=Vertex,
-        finishtype::Union{Nothing, Tail, Vertex}=Vertex,
-        throughconnected::Bool=true,
-    )
-        # validity checks
-        starttype != nothing || finishtype != nothing || throw(ArgumentError("start and finish types cannot both be nothing"))
-        if starttype == nothing
-            finishtype != Vertex || throw(ArgumentError("finish cannot be Vertex if start is nothing"))
-            !hastail && !hasvacuumloop || throw(ArgumentError("cannot have middle tensors if start is nothing"))
-            !throughconnected || throw(ArgumentError("cannot be throughconnected if start is nothing"))
-            finish = start
-            return new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
-        end
-        if finishtype == nothing
-            starttype != Vertex || throw(ArgumentError("start cannot be Vertex if finish is nothing"))
-            !hastail && !hasvacuumloop throw(ArgumentError("cannot have middle tensors if finish is nothing"))
-            !throughconnected || throw(ArgumentError("cannot be throughconnected if start is nothing"))
-            finish = start
-            return new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
-        end
-        if !throughconnected && starttype == Vertex && finishtype == Vertex
-            throw(ArgumentError("must be through connected if both top and bottom are Vertex"))
-        end
-        # construction
-        finish = start + 1 # group number of bottom tensor in the segment
-        if throughconnected finish += 1 end # first reflector
-        if hastail finish += 2 end          # tail and reflector
-        if hasvacuumloop finish += 2 end    # vacuum loop and reflector
-        new(start, finish, x, y, (x, y), hastail, hasvacuumloop, starttype, finishtype, throughconnected)
-    end
-end
-
-get_groups(s::Segment) = s.start:s.finish
-num_groups(s::Segment) = s.finish - s.start + 1
-
-struct FibTensorNetwork
-    tn::TensorNetwork
-    tensortype_from_group::Dict{Int, Type{<:AbstractFibTensorType}}
-    segments::Vector{Segment}
-    segment_from_position::Dict{GridPosition, Segment}
-    FibTensorNetwork() = new(TensorNetwork(), Dict(), [], Dict())
-end
-
-function get_segment(ftn::FibTensorNetwork, group::Int)
-    for segment in ftn.segments
-        if segment.start <= group <= segment.finish return segment end
-    end
-    throw(KeyError(group))
-end
-
-function _add_tensor!(ftn::FibTensorNetwork, group::Int, ::Type{T}) where T <: AbstractFibTensorType
-    index_labels = [IL(group, p) for p in tensor_ports(T)]
-    ftn.tensortype_from_group[group] = T
-    add_tensor!(ftn.tn, TensorLabel(group, index_labels))
-end
-
-function add_segment!(ftn::FibTensorNetwork, s::Segment, )
-    # put segment in ftn
-    push!(ftn.segments, s)
-    ftn.segment_from_position[s.pos] = s
-    # add tensors at top and bottom
-    if s.starttype != nothing _add_tensor!(ftn, s.start, s.starttype) end
-    if s.finishtype != nothing _add_tensor!(ftn, s.finish, s.finishtype) end
-    # add tensors in the middle
-    counter = 1
-    if s.hastail
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-        _add_tensor!(ftn, s.start + counter, Tail); Counter += 1
-    end
-    if s.hasvacuumloop
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-        _add_tensor!(ftn, s.start + counter, VacuumLoop); counter += 1
-    end
-    if s.starttype != nothing && s.finishtype != nothing && s.throughconnected
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-    end
-    # sanity check that the group numbers line up as expected
-    s.start + counter == s.finish || error("group numbers misaligned while creating segment")
-    # contractions
-    if !s.throughconnected return end
-    # add contractions from top to middle
-    counter = 1
-    startidx = s.starttype == Vertex IL(start, :c)
-    if s.hastail
-        add_contraction!(ftn.tn, IC(IL(start, :c), IL(start+1, :a)))
-        add_contraction!(ftn.tn, IC(IL(start+1, :b), IL(start+2, :a)))
-        add_contraction!(ftn.tn, IC(IL(start+2, :b), IL(start+3, :a)))
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-        _add_tensor!(ftn, s.start + counter, Tail); Counter += 1
-    end
-    if s.hasvacuumloop
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-        _add_tensor!(ftn, s.start + counter, VacuumLoop); counter += 1
-    end
-    if s.starttype != nothing && s.finishtype != nothing && s.throughconnected
-        _add_tensor!(ftn, s.start + counter, Reflector); counter += 1
-    end
-    add_contraction!(ftn.tn, IC(IL(start, :c), IL(start+1, :a)))
-    add_contraction!(ftn.tn, IC(IL(start+1, :b), IL(start+2, :a)))
-    add_contraction!(ftn.tn, IC(IL(start+2, :b), IL(start+3, :a)))
-    # add contractions for amplitude tensor
-    if hasamp
-        add_contraction!(ftn.tn, IC(IL(start+3, :b), IL(start+4, :a)))
-        add_contraction!(ftn.tn, IC(IL(start+4, :b), IL(start+5, :a)))
-    end
-    # add final contraction from middle to bottom
-    add_contraction!(ftn.tn, IC(IL(finish-1, :b), IL(finish, :c)))
-end
-    
 function connect_segments!(ftn::FibTensorNetwork, pos1::GridPosition, pos2::GridPosition, group::Int; enable_adjacency_check::Bool=true, dir::Symbol=:x)
     if enable_adjacency_check
         # check that positions are either directly above or below
@@ -254,7 +131,7 @@ function grid_bounded(w::Int, h::Int)
             positions[g] = p
         end
     end
-    
+
     #plot(ftn.tn, [positions[g] for g in 1:new_group-1], ftn.tensortype_from_group)
 
     # connect internal rows and cols
@@ -268,7 +145,7 @@ function grid_bounded(w::Int, h::Int)
         positions[new_group] = (i, j+0.5)
         new_group += 1
     end
-    
+
     plot(ftn.tn, [positions[g] for g in 1:new_group-1], ftn.tensortype_from_group)
 
     # --- right boundary (i = w) ---
@@ -345,4 +222,25 @@ function grid_bounded(w::Int, h::Int)
     #end
     #positions = Dict(g => (4*p[1], 4*p[2]) for (g, p) in positions)
     ftn, ql, positions
+end
+
+index_labels(::Type{T}, group::Int) where T <: AbstractFibTensorType = [IL(group, p) for p in tensor_ports(T)]
+
+function lattice_calculation(w::Int, h::Int)
+    ftn, ql, positions = grid(w, h)
+    # tn construction
+    g2tt::Dict{Int, Type{<:AbstractFibTensorType}} = Dict(g => tt for (tt, gs) in tt2gs for g in gs)
+    tn = TensorNetwork()
+    for (g, tt) in g2tt add_tensor!(tn, TensorLabel(g, index_labels(tt, g))) end
+        for ic in contractions add_contraction!(tn, ic) end
+            # en construction and execution
+            inds, data = naive_contract(tn, g2tt)
+            # ql and data extraction
+            ql = build_ql(qubits_from_index)
+            s, a = get_states_and_amps(ql, inds, data)
+            # visualization
+            plot(tn, positions, g2tt)
+            for (state, amp) in zip(s, a)
+                plot(ql, positions, state, amp)
+            end
 end

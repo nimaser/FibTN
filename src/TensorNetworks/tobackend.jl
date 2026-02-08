@@ -5,7 +5,7 @@ using ..TensorNetworks
 
 export ExecutionTensor, ExecutionState, ExecutionStep, execute_step!
 export get_ids, get_indices, get_tensors, get_tensor
-export ContractionStep, FetchResultStep
+export PermuteIndicesStep, ContractionStep, FetchResultStep
 
 """
 Represents a single tensor (in the sense of one numerical array in
@@ -115,6 +115,8 @@ end
 struct PermuteIndicesStep <: ExecutionStep
     id::Int
     new_indices::Vector{IndexLabel}
+    PermuteIndicesStep(id::Int, new_indices::Vector{IndexLabel}) =
+        new_indices == unique(new_indices) ? new(id, new_indices) : throw(ArgumentError("duplicate indices not allowed"))
 end
 
 """A contraction between two indices."""

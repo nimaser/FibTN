@@ -55,6 +55,13 @@ end
     @test et.indices == [k, i, j]
     @test size(et.data) == (4, 2, 3)
     @test et.data == permutedims(data, (3, 1, 2))
+
+    # must provide enough indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j]))
+    # can't provide duplicate indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, j]))
+    # must provide valid indices
+    @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, IndexLabel(2, :a)]))
 end
 
 @testset "ExecutionState ContractionStep I" begin

@@ -2,6 +2,7 @@ module Segments
 
 using ..TensorNetworks
 using ..FibTensorNetworks
+using ..FibTensorTypes
 using ..TOBackend
 
 export Segment, get_ftn, segment_ports, segment_data
