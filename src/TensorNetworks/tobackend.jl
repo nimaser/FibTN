@@ -29,7 +29,7 @@ corresponding to the data's dimensions. We can then translate any
 IndexLabels to a position in a dimension list when contraction needs to
 occur.
 """
-struct ExecutionTensor
+mutable struct ExecutionTensor
     id::Int
     groups::Set{Int}
     indices::Vector{IndexLabel}
@@ -85,15 +85,15 @@ end
 """Get all ids in this ExecutionState."""
 get_ids(es::ExecutionState) =
     keys(es.tensor_from_id)
-    
+
 """Get all indices in this ExecutionState."""
 get_indices(es::ExecutionState) =
     keys(es.id_from_index)
-    
+
 """Get all ExecutionTensors resulting from the specified group."""
 get_tensors(es::ExecutionState, group::Int) =
     [et for (_, et) in es.tensor_from_id if group ∈ et.groups]
-    
+
 """Get the ExecutionTensor containing the specified IndexLabel."""
 get_tensor(es::ExecutionState, il::IndexLabel) =
     es.tensor_from_id[es.id_from_index[il]]
@@ -109,6 +109,12 @@ abstract type ExecutionStep end
 """Default (unimplemented) implementation of execute_step!"""
 function execute_step!(es::ExecutionState, step::ExecutionStep)
     error("$(typeof(step)) not implemented")
+end
+
+"""Permute the dimensions of an array"""
+struct PermuteIndicesStep <: ExecutionStep
+    id::Int
+    new_indices::Vector{IndexLabel}
 end
 
 """A contraction between two indices."""
@@ -130,6 +136,26 @@ struct QRDecompStep <: ExecutionStep
     # TODO
 end
 
+function execute_step!(es::ExecutionState, p::PermuteIndicesStep)
+    t = es.tensor_from_id[p.id]
+
+    old_inds = t.indices
+    new_inds = p.new_indices
+    length(old_inds) == length(new_inds) ||
+        throw(ArgumentError("index count mismatch in permutation"))
+
+    # build permutation
+    perm = map(ind -> findfirst(==(ind), old_inds), new_inds)
+    any(isnothing, perm) &&
+        throw(ArgumentError("permutation contains unknown index"))
+
+    # apply permutation
+    t.data = permutedims(t.data, perm)
+    t.indices = new_inds
+
+    return nothing
+end
+
 function execute_step!(es::ExecutionState, cs::ContractionStep)
     # make handles to id and exectensor
     ida = es.id_from_index[cs.a]
@@ -145,7 +171,7 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
         IA = collect(1:length(eta.indices))
         IA[pa] = 0
         IA[pb] = 0
-        
+
         # perform trace
         Z = tensortrace(eta.data, IA, false)
         # new indices are the uncontracted ones
@@ -156,7 +182,7 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
         IB = collect(length(eta.indices)+1:length(eta.indices)+length(etb.indices))
         IA[pa] = 0
         IB[pb] = 0
-        
+
         # perform contraction
         Z = tensorcontract(
             eta.data, IA, false,
@@ -172,7 +198,7 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
     new_id = es._next_id
     new_groups = union(eta.groups, etb.groups)
     etz = ExecutionTensor(new_id, new_groups, new_indices, Z)
-    
+
     # remove old tensors and ids: delete! is idempotent so no issues if we did the trace
     delete!(es.tensor_from_id, ida)
     delete!(es.tensor_from_id, idb)
@@ -183,7 +209,7 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
     for idx in new_indices es.id_from_index[idx] = new_id end
     # update overall id counter
     es._next_id += 1
-        
+
     return nothing
 end
 
