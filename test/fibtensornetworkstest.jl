@@ -13,7 +13,7 @@ using FibTN.FibTensorNetworks
     add_contraction!(ftn.tn, ic1)
     add_contraction!(ftn.tn, ic2)
     # fetching data
-    @test tensordata_from_group(ftn) = Dict(
+    @test tensordata_from_group(ftn) == Dict(
         1 => tensor_data(Tail),
         2 => tensor_data(Reflector),
         3 => tensor_data(Vertex)

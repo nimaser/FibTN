@@ -4,7 +4,13 @@ using ..TensorNetworks
 using ..TOBackend
 using ..FibTensorTypes
 
+# so we can extend it and avoid name resolution issues
+import ..TensorNetworks: add_tensor!
+
 export FibTensorNetwork, add_tensor!, tensordata_from_group
+
+const IL = IndexLabel
+const IC = IndexContraction
 
 """
 Convenience abstraction
@@ -12,7 +18,7 @@ Convenience abstraction
 struct FibTensorNetwork
     tn::TensorNetwork
     tensortype_from_group::Dict{Int, Type{<:AbstractFibTensorType}}
-    FibTensorNetwork() = new(TensorNetwork(), Dict(), [], Dict())
+    FibTensorNetwork() = new(TensorNetwork(), Dict())
 end
 
 """

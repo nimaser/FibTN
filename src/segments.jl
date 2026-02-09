@@ -5,6 +5,8 @@ using ..FibTensorNetworks
 using ..FibTensorTypes
 using ..TOBackend
 
+using SparseArrayKit
+
 export Segment, get_ftn, segment_ports, segment_data
 
 const IL = IndexLabel
@@ -12,30 +14,30 @@ const IC = IndexContraction
 
 """Completely non-errorchecked segment implementation."""
 struct Segment
-    toptype::Union{Type{Tail}, Type{Vector}}
+    toptype::Union{Type{Tail}, Type{Vertex}}
     midtail::Bool
     midloop::Bool
-    bottype::Union{Type{Tail}, Type{Vector}}
+    bottype::Union{Type{Tail}, Type{Vertex}}
 end
 
 function get_ftn(s::Segment)
     ftn = FibTensorNetwork()
     # add tensors
     groupnum = 1
-    add_tensor!(ftn, groupnum, toptype); groupnum += 1
+    add_tensor!(ftn, groupnum, s.toptype); groupnum += 1
     add_tensor!(ftn, groupnum, Reflector); groupnum += 1
-    if midtail
+    if s.midtail
         add_tensor!(ftn, groupnum, Tail); groupnum += 1
         add_tensor!(ftn, groupnum, Reflector); groupnum += 1
     end
-    if midloop
+    if s.midloop
         add_tensor!(ftn, groupnum, VacuumLoop); groupnum += 1
         add_tensor!(ftn, groupnum, Reflector); groupnum += 1
     end
-    add_tensor!(ftn, groupnum, bottype)
+    add_tensor!(ftn, groupnum, s.bottype)
     # add contractions
-    topport = toptype == Tail ? :b : :c
-    botport = bottype == Tail ? :a : :c
+    topport = s.toptype == Tail ? :b : :c
+    botport = s.bottype == Tail ? :a : :c
     add_contraction!(ftn.tn, IC(IL(1, topport), IL(2, :a)))
     for i in 2:2:groupnum-2
         add_contraction!(ftn.tn, IC(IL(i, :b), IL(i+1, :a)))
@@ -45,32 +47,34 @@ function get_ftn(s::Segment)
     ftn
 end
 
-function tensor_ports(s::Segment)
+function segment_ports(s::Segment)
     ports = []
-    toptype == Vertex && push!(ports, :ta, :tb)
-    toptype == Tail && push!(ports, :ta)
-    bottype == Vertex && push!(ports, :ba, :bb)
-    bottype == Tail && push!(ports, :bb)
+    s.toptype == Vertex && push!(ports, :ta, :tb)
+    s.toptype == Tail && push!(ports, :ta)
+    s.bottype == Vertex && push!(ports, :ba, :bb)
+    s.bottype == Tail && push!(ports, :bb)
     push!(ports, :tp)
-    midtail && push!(ports, :mp)
+    s.midtail && push!(ports, :mp)
     push!(ports, :bp)
+    ports
 end
 
 function _il_from_port(s::Segment)
-    maxgroupnum == s.hastail && s.hasloop ? 7 : s.hastail || s.hasloop ? 5 : 3
-    ilmap = Dict{Symbol, IL}
+    maxgroupnum = s.midtail && s.midloop ? 7 : s.midtail || s.midloop ? 5 : 3
+    ilmap = Dict{Symbol, IL}()
     push!(ilmap, :ta => IL(1, :a))
     push!(ilmap, :tp => IL(1, :p))
     push!(ilmap, :bb => IL(maxgroupnum, :b))
     push!(ilmap, :bp => IL(maxgroupnum, :p))
     s.toptype == Vertex && push!(ilmap, :tb => IL(1, :b))
     s.bottype == Vertex && push!(ilmap, :ba => IL(maxgroupnum, :a))
-    s.hastail && push!(ilmap, IL(3, :p) => :mp)
+    s.midtail && push!(ilmap, :mp => IL(3, :p))
+    ilmap
 end
 
-_segmentcache = Dict{Segment, <:AbstractArray}
+_segmentcache = Dict{Segment, SparseArray}()
 
-function tensor_data(s::Segment)
+function segment_data(s::Segment)
     # fetch data if it is stored in the cache
     if haskey(_segmentcache, s) return _segmentcache[s] end
     # create the data array by creating and then contracting the associated ftn
@@ -81,7 +85,7 @@ function tensor_data(s::Segment)
     et = es.tensor_from_id[only(get_ids(es))]
     # permute data so index order matches ports
     il_from_port = _il_from_port(s)
-    new_inds = [il_from_port[port] for port in tensor_ports(s)]
+    new_inds = [il_from_port[port] for port in segment_ports(s)]
     execute_step!(es, PermuteIndicesStep(only(get_ids(es)), new_inds))
     _segmentcache[s] = et.data
     et.data
