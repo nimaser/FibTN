@@ -58,6 +58,8 @@ function plot(tn::TensorNetwork, positions::Vector{Point2}, g2tt::Dict{Int, Type
     ax
 end
 
+plot(ftn::FibTensorNetwork, positions::Vector{Point2}) = plot(ftn.tn, positions, ftn.tensortype_from_group)
+
 function plot(ql::QubitLattice, positions::Vector{Point2}, qubitvals::Dict{Int, Int}, amp::Real)
     qlds = QubitLatticeDisplaySpec(position_from_index(collect(QubitLattices.get_indices(ql)), positions), color_from_qubit(qubitvals), 0.5)
 
