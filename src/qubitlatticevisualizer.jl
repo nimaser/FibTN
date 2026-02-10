@@ -50,8 +50,8 @@ function visualize(ql::QubitLattice, qlds::QubitLatticeDisplaySpec, ax::Axis)
     color_from_edge = Dict{Edge, Symbol}()
     width_from_edge = Dict{Edge, Real}()
     for (qubit, edge) in edge_from_qubit
-        color_from_edge[edge] = get(qlds.color_from_qubit, qubit) do; :gray end
-        width_from_edge[edge] = get(color_from_edge, edge) do; :gray end == :red ? 20 : 1
+        color_from_edge[edge] = get(qlds.color_from_qubit, qubit) do; :gray90 end
+        width_from_edge[edge] = get(color_from_edge, edge) do; :gray90 end == :red ? 20 : 1
     end
     # plot the graph
     p = graphplot!(ax, g, layout=node_positions, edge_color=[color_from_edge[e] for e in edges(g)], edge_wdith=[width_from_edge[e] for e in edges(g)])
