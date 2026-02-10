@@ -4,7 +4,7 @@ using Graphs
 using ..TensorNetworks
 using ..IndexTriplets
 
-export QubitLattice, add_index!, get_indices
+export QubitLattice, add_index!, get_indices, get_qubits
 export idxval2qubitvals, idxvals2qubitvals, qubitvals2idxvals
 
 """
@@ -54,6 +54,9 @@ end
 """"""
 get_indices(ql::QubitLattice) = keys(ql.qubits_from_index)
 
+""""""
+get_qubits(ql::QubitLattice) = keys(ql.indices_from_qubit)
+
 """
 
 """
@@ -68,9 +71,13 @@ end
 function idxvals2qubitvals(ql::QubitLattice, inds::Vector{IndexLabel}, vals::Vector{Int})
     qubitvals = Dict{Int, Int}()
     for (idx, val) in zip(inds, vals)
-        mergewith!(qubitvals, idxval2qubitvals(ql, idx, val)) do x,y
-            if x != y error("inconsistent qubit values $x and $y found for qubit") end
-            x
+        newqubitvals = idxval2qubitvals(ql, idx, val)
+        # merge the dictionaries
+        for (k, v) in newqubitvals
+            # check that key isn't already there with an inconsistent value
+            !haskey(qubitvals, k) || qubitvals[k] == v ||error("inconsistent vals for qubit $k")
+            # merge
+            qubitvals[k] = v
         end
     end
     qubitvals
