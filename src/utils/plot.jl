@@ -18,7 +18,7 @@ tt2marker(::Type{Vertex}) = :star6
 tt2marker(::Type{Crossing}) = :star4
 tt2marker(::Type{Fusion}) = :star3
 
-color_from_qubit(qubitvals::Dict{Int, Int}) = Dict(q => v == 1 ? :red : :gray for (q, v) in qubitvals)
+color_from_qubit(qubitvals::Dict{Int, Int}) = Dict(q => v == 1 ? :red : :gray90 for (q, v) in qubitvals)
 
 position_from_index(indices::Vector{IL}, positions::Vector{Point2}) = Dict(i => positions[i.group] for i in indices)
 
