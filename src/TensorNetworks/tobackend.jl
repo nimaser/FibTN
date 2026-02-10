@@ -61,7 +61,7 @@ mutable struct ExecutionState
     function ExecutionState(tn::TensorNetwork, tensordata_from_group::Dict{Int, <: AbstractArray})
         # check that every TensorLabel has data
         for g in get_groups(tn)
-            haskey(tensordata_from_group, g) || throw(ArgumentError("missing data for TensorLabel with group $group"))
+            haskey(tensordata_from_group, g) || throw(ArgumentError("missing data for TensorLabel with group $g"))
         end
         # initialize fields
         tensor_from_id = Dict{Int, ExecutionTensor}()

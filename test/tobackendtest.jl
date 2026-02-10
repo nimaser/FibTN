@@ -23,6 +23,9 @@ using SparseArrayKit, TensorOperations
     @test length(es.tensor_from_id) == 2
     @test es._next_id == 3
 
+    # check construction without providing data arrays
+    @test_throws ArgumentError ExecutionState(tn, Dict{Int, SparseArray}())
+
     # check indices and data
     et1, et2 = es.tensor_from_id[1], es.tensor_from_id[2]
     @test et1.indices == [a1, b1]

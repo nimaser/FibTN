@@ -8,7 +8,8 @@ export QubitLattice, add_index!, get_indices, get_qubits
 export idxval2qubitvals, idxvals2qubitvals, qubitvals2idxvals
 
 """
-
+this needs to all be rewritten to use my own graph implementation, like with the tensornetworksvisualizer,
+rather than graphmakie and graphs, because they're cumbersome when I've got to go in and modify stuff
 """
 struct QubitLattice
     qubits_from_index::Dict{IndexLabel, Vector{Int}}
