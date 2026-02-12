@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "67e943fefe4008147d2bb16051f7c9de46fd7f90"
+project_hash = "92d8d7a1f1fc9c8eabf71e28fd80f7b534149038"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -517,7 +517,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.11+0"
 
 [[deps.FibTN]]
-deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NetworkLayout", "SparseArraysBase", "TensorKitSectors"]
+deps = ["GLMakie", "GraphMakie", "Graphs", "ITensorBase", "ITensors", "MetaGraphsNext", "NamedDimsArrays", "NetworkLayout", "SparseArraysBase", "TensorKitSectors", "Test"]
 path = "."
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
@@ -1689,6 +1689,16 @@ deps = ["DataStructures"]
 git-tree-sha1 = "64d974c2e6fdf07f8155b5b2ca2ffa9069b608d9"
 uuid = "a2af1166-a08f-5f64-846c-94a0d3cef48c"
 version = "1.2.2"
+
+[[deps.SparseArrayKit]]
+deps = ["LinearAlgebra", "PackageExtensionCompat", "TensorOperations", "TupleTools", "VectorInterface"]
+git-tree-sha1 = "1f7291542f44195c86bc6db293c5affb97c020e1"
+uuid = "a9a3c162-d163-4c15-8926-b8794fbefed2"
+version = "0.4.2"
+weakdeps = ["SparseArrays"]
+
+    [deps.SparseArrayKit.extensions]
+    SparseArrayKitSparseArrays = "SparseArrays"
 
 [[deps.SparseArrays]]
 deps = ["Libdl", "LinearAlgebra", "Random", "Serialization", "SuiteSparse_jll"]
