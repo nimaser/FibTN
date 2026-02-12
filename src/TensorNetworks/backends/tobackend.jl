@@ -2,6 +2,7 @@ module TOBackend
 
 using SparseArrayKit, TensorOperations
 using ..TensorNetworks
+import ..TensorNetworks: get_tensors, get_tensor, get_indices # to merge method tables
 
 export ExecutionTensor, ExecutionState, ExecutionStep, execute_step!
 export get_ids, get_indices, get_tensors, get_tensor
@@ -35,7 +36,9 @@ mutable struct ExecutionTensor
     indices::Vector{IndexLabel}
     data::SparseArray
     function ExecutionTensor(id::Int, groups::Set{Int}, indices::Vector{IndexLabel}, data::AbstractArray)
-        if (li = length(indices)) != (nd = ndims(data)) error("number of indices $li differs from array ndims $nd\n Indices: $indices") end
+        if (li = length(indices)) != (nd = ndims(data))
+            error("number of indices $li differs from array ndims $nd\n Indices: $indices")
+        end
         new(id, groups, indices, SparseArray(data))
     end
 end
@@ -55,32 +58,36 @@ that its indices correspond with the order of indices in the indices
 vector of the TensorLabel.
 """
 mutable struct ExecutionState
-    tensor_from_id::Dict{Int, ExecutionTensor}
-    id_from_index::Dict{IndexLabel, Int}
+    tensor_from_id::Dict{Int,ExecutionTensor}
+    id_from_index::Dict{IndexLabel,Int}
     _next_id::Int
-    function ExecutionState(tn::TensorNetwork, tensordata_from_group::Dict{Int, <: AbstractArray})
+    function ExecutionState(tn::TensorNetwork, tensordata_from_group::Dict{Int,<:AbstractArray})
         # check that every TensorLabel has data
         for g in get_groups(tn)
             haskey(tensordata_from_group, g) || throw(ArgumentError("missing data for TensorLabel with group $g"))
         end
         # initialize fields
-        tensor_from_id = Dict{Int, ExecutionTensor}()
-        id_from_index = Dict{IndexLabel, Int}()
+        tensor_from_id = Dict{Int,ExecutionTensor}()
+        id_from_index = Dict{IndexLabel,Int}()
         _next_id = 1
         # convert TensorLabels to ExecutionTensors
-        for tl in tn.tensors
+        for tl in get_tensors(tn)
             et = ExecutionTensor(_next_id,
-                                 Set(tl.group),
-                                 copy(tl.indices),
-                                 tensordata_from_group[tl.group],
-                                )
+                Set(tl.group),
+                copy(tl.indices),
+                tensordata_from_group[tl.group],
+            )
             tensor_from_id[_next_id] = et
-            for index in tl.indices id_from_index[index] = _next_id end
+            for index in tl.indices
+                id_from_index[index] = _next_id
+            end
             _next_id += 1
         end
         new(tensor_from_id, id_from_index, _next_id)
     end
 end
+
+ExecutionState(ttn::TypedTensorNetwork) = ExecutionState(ttn.tn, tensordata_from_group(ttn))
 
 """Get all ids in this ExecutionState."""
 get_ids(es::ExecutionState) =
@@ -204,11 +211,17 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
     # remove old tensors and ids: delete! is idempotent so no issues if we did the trace
     delete!(es.tensor_from_id, ida)
     delete!(es.tensor_from_id, idb)
-    for idx in eta.indices delete!(es.id_from_index, idx) end
-    for idx in etb.indices delete!(es.id_from_index, idx) end
+    for idx in eta.indices
+        delete!(es.id_from_index, idx)
+    end
+    for idx in etb.indices
+        delete!(es.id_from_index, idx)
+    end
     # add new tensor and id
     es.tensor_from_id[new_id] = etz
-    for idx in new_indices es.id_from_index[idx] = new_id end
+    for idx in new_indices
+        es.id_from_index[idx] = new_id
+    end
     # update overall id counter
     es._next_id += 1
 

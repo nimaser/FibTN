@@ -6,6 +6,7 @@ authors = ["nmaserang <nmaserang@berkeley.edu>"]
 [deps]
 Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorBase = "4795dd04-0d67-49bb-8f44-b89c448a1dc7"
@@ -25,6 +26,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 Debugger = "0.7.16"
 GLMakie = "0.13.7"
+GeometryBasics = "0.5.10"
 GraphMakie = "0.6.3"
 Graphs = "1.13.2"
 ITensorBase = "0.4.1"

@@ -1,15 +1,11 @@
 module FibTN
 
-include("TensorNetworks/tensornetworks.jl")
-include("TensorNetworks/tobackend.jl")
-include("TensorNetworks/tensornetworkvisualizer.jl")
+include("TensorNetworks/TensorNetworks.jl")
 
 include("indextriplets.jl")
-include("fibtensortypes.jl")
-include("fibtensornetworks.jl")
-include("segments.jl")
+include("QubitLattices/QubitLattices.jl")
 
-include("qubitlattices.jl")
-include("qubitlatticevisualizer.jl")
+include("TensorTypes/fibtensortypes.jl")
+include("TensorTypes/segmenttensortypes.jl")
 
 end # module FibTN

@@ -3,15 +3,14 @@ module FibTNTests
 using ReTest
 using FibTN
 
-include("tensornetworkstest.jl")
-include("tobackendtest.jl")
+include("TensorNetworks/tensornetworktest.jl")
+include("TensorNetworks/typedtensornetworktest.jl")
+include("TensorNetworks/tobackendtest.jl")
 
 include("indextripletstest.jl")
-include("fibtensortypestest.jl")
-include("fibtensornetworkstest.jl")
-
-include("segmentstest.jl")
-
 include("qubitlatticestest.jl")
+
+include("TensorTypes/fibtensortypestest.jl")
+include("TensorTypes/segmenttensortypestest.jl")
 
 end # module FibTNTests

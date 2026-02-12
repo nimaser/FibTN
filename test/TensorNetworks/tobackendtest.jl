@@ -1,7 +1,15 @@
 using FibTN.TensorNetworks
-using FibTN.TOBackend
+using FibTN.TensorNetworks.TOBackend
 
 using SparseArrayKit, TensorOperations
+
+import FibTN.TensorNetworks: tensor_ports, tensor_data
+abstract type DummyTensorType <: TensorType end
+struct DummyTensorType2 <: TensorType end
+tensor_data(::Type{DummyTensorType}) = [1, 2, 3]
+tensor_ports(::Type{DummyTensorType}) = (:a,)
+tensor_data(::Type{DummyTensorType2}) = [0, 3, 6]
+tensor_ports(::Type{DummyTensorType2}) = (:b,)
 
 @testset "ExecutionState basics" begin
     a1 = IndexLabel(1, :a)
@@ -24,7 +32,7 @@ using SparseArrayKit, TensorOperations
     @test es._next_id == 3
 
     # check construction without providing data arrays
-    @test_throws ArgumentError ExecutionState(tn, Dict{Int, SparseArray}())
+    @test_throws ArgumentError ExecutionState(tn, Dict{Int,SparseArray}())
 
     # check indices and data
     et1, et2 = es.tensor_from_id[1], es.tensor_from_id[2]
@@ -35,11 +43,31 @@ using SparseArrayKit, TensorOperations
 
     # get
     @test Set(get_ids(es)) == Set([1, 2])
-    @test Set(TOBackend.get_indices(es)) == Set([a1, b1, a2, b2])
+    @test Set(get_indices(es)) == Set([a1, b1, a2, b2])
     @test get_tensors(es, 1) == [et1]
     @test get_tensors(es, 2) == [et2]
-    @test TOBackend.get_tensor(es, IndexLabel(1, :a)) == et1
-    @test TOBackend.get_tensor(es, IndexLabel(2, :a)) == et2
+    @test get_tensor(es, IndexLabel(1, :a)) == et1
+    @test get_tensor(es, IndexLabel(2, :a)) == et2
+end
+
+@testset "ExecutionState TypedTensorNetwork" begin
+    # construction, adding tensors, adding contractions
+    ttn = TypedTensorNetwork()
+    @test length(ttn.tensortype_from_group) == 0
+    add_tensor!(ttn, 1, DummyTensorType)
+    add_tensor!(ttn, 2, DummyTensorType2)
+    ic = IndexContraction(IndexLabel(1, :a), IndexLabel(2, :b))
+    add_contraction!(ttn.tn, ic)
+
+    es = ExecutionState(ttn)
+    execute_step!(es, ContractionStep(ic))
+    et = es.tensor_from_id[only(get_ids(es))]
+    @test et.groups == Set([1, 2])
+    @test et.indices == []
+
+    # check calculation via @tensor
+    @tensor C[] := tensor_data(DummyTensorType)[a] * tensor_data(DummyTensorType2)[a]
+    @test Array(et.data) ≈ C
 end
 
 @testset "ExecutionState PermuteIndicesStep" begin
@@ -101,7 +129,7 @@ end
     @test et.indices == [i, k]
 
     # check calculation via @tensor
-    @tensor C[a,c] := A[a,b] * B[b,c]
+    @tensor C[a, c] := A[a, b] * B[b, c]
     @test Array(et.data) ≈ C
 end
 
@@ -147,6 +175,6 @@ end
     @test et.groups == Set([1, 2, 3])
     @test et.indices == [i, l]
     # check calculation via @tensor
-    @tensor D[a,d] := A[a,b] * B[b,c] * C[c,d]
+    @tensor D[a, d] := A[a, b] * B[b, c] * C[c, d]
     @test Array(et.data) ≈ D
 end
