@@ -5,16 +5,10 @@ authors = ["nmaserang <nmaserang@berkeley.edu>"]
 
 [deps]
 Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
-GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
-GraphMakie = "1ecd5474-83a3-4783-bb4f-06765db800d2"
-Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 ITensorBase = "4795dd04-0d67-49bb-8f44-b89c448a1dc7"
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-MetaGraphsNext = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
-NamedDimsArrays = "60cbd0c0-df58-4cb7-918c-6f5607b73fde"
-NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 ReTest = "e0db7c4e-2690-44b9-bad6-7687da720f89"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SparseArrayKit = "a9a3c162-d163-4c15-8926-b8794fbefed2"
@@ -23,18 +17,18 @@ TensorKitSectors = "13a9c161-d5da-41f0-bcbd-e1a08ae0647f"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[weakdeps]
+GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+
+[extensions]
+GLMakieVisualizationExt = "GLMakie"
+
 [compat]
 Debugger = "0.7.16"
-GLMakie = "0.13.7"
 GeometryBasics = "0.5.10"
-GraphMakie = "0.6.3"
-Graphs = "1.13.2"
 ITensorBase = "0.4.1"
 ITensors = "0.9.15"
 Makie = "0.24.7"
-MetaGraphsNext = "0.7.4"
-NamedDimsArrays = "0.10.0"
-NetworkLayout = "0.4.10"
 ReTest = "0.3.4"
 Revise = "3.13.2"
 SparseArrayKit = "0.4.2"
@@ -42,3 +36,4 @@ SparseArraysBase = "0.7.10"
 TensorKitSectors = "0.3.3"
 TensorOperations = "5.4.0"
 Test = "1.11.0"
+GLMakie = "0.13.7"

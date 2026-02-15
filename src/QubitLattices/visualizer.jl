@@ -1,12 +1,8 @@
-module Visualizer
-
-using ..QubitLattices
-using ..TensorNetworks
-import ..TensorNetworks.Visualizer: visualize # merge method tables
+using FibTN.QubitLattices
+using FibTN.TensorNetworks
 
 using GLMakie, GeometryBasics
 
-export default_qubitdisplayspec
 export visualize
 
 """The default color, linewidth, etc for plotting qubit values."""
@@ -27,7 +23,7 @@ All unpaired qubits are displayed as tails of length `tail_length`.
 Custom display properties for qubit values 0 and 1 should be provided via
 the `qubitdisplayspec` parameter.
 """
-function visualize(
+function FibTN.visualize(
     ax::Axis,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
@@ -58,7 +54,7 @@ function visualize(
         push!(linewidths, qubitdisplayspec[:linewidth][qubitvals[q]])
     end
     # plot linesegments
-    segmentsresult = linesegments!(ax, edge_endpoints, color=colors)
+    segmentsresult = linesegments!(ax, edge_endpoints, color=Observable(colors), linewidth=5)
     segmentsresult.inspector_label = (plot, i, idx) -> begin
         i = i ÷ 2 # i counts up by endpoints, so by two per segment plotted
         q = qubits[i]
@@ -77,7 +73,7 @@ Returns a Makie `Figure` and array of axes.
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function visualize(
+function FibTN.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     states::Vector{Dict{Int, Int}},
@@ -169,7 +165,7 @@ Returns a Makie `Figure` and `Axis`.
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function visualize(
+function FibTN.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     inds::Vector{IndexLabel},
@@ -180,7 +176,12 @@ function visualize(
     # helper function that calculates amplitude from qubitvals
     function get_amp(qubitvals::Dict{Int, Int})
         _, vals = qubitvals2idxvals(ql, qubitvals; inds=inds)
-        data[vals]
+        try
+            data[vals...]
+        catch e
+            # if we left the vertex-constraint subspace
+            e isa BoundsError ? 0 : rethrow(e)
+        end
     end
     # create figure and axis
     f = Figure()
@@ -193,19 +194,22 @@ function visualize(
     register_interaction!(ax, :toggle_qubit) do event::MouseEvent, ax
         # discard non-leftclick
         if event.type != MouseEventTypes.leftclick return end
-        # get the segment that was clicked
-        pick = pick(ax.scene, event.data)
-        # check that it was our segments plot
-        if pick == nothing || pick.plot != segmentsresult return end
+        if Keyboard.t ∉ events(f).keyboardstate return end
+        # get the segment that was clicked, and check that it was our segments plot
+        p, i = pick(f)
+        if p != segmentsresult return end
         # get selected qubit
-        idx = pick.index ÷ 2
+        idx = i ÷ 2
         q = qubits[idx]
         # toggle selected qubit
         qubitvals[q] = 1 - qubitvals[q]
         # update the ax title and segment display properties
         ax.title="$(get_amp(qubitvals))"
-        segmentresult.colors[][idx] = qubitdisplayspec[:color][qubitvals[q]]
-        segmentresult.linewidth[][idx] = qubitdisplayspec[:linewidth][qubitvals[q]]
+        colors_observable = segmentsresult.kw[:color]
+        colors_observable[][idx] = qubitdisplayspec[:color][qubitvals[q]]
+        notify(colors_observable)
+        #segmentsresult.kw[:linewidth][idx] = qubitdisplayspec[:linewidth][qubitvals[q]]
+        Consume(true)
     end
     # cleanup and return
     DataInspector(f, range=30)
@@ -231,5 +235,3 @@ function _calculategridsidelengths(area::Int)
     end
     Int(width), Int(height)
 end
-
-end # module Visualizer

@@ -1,6 +1,4 @@
-module Visualizer
-
-using ..TensorNetworks
+using FibTN.TensorNetworks
 
 using GLMakie, GeometryBasics
 
@@ -15,7 +13,7 @@ DataInspector so:
 - hovering over an edge shows the contracted indices
 - hovering over a node shows the tensor group number
 """
-function visualize(
+function FibTN.visualize(
     ax::Axis,
     tn::TensorNetwork,
     groups::Vector{Int},
@@ -49,7 +47,7 @@ end
 """
 Wraps the TensorNetwork visualize function, autofilling the groups, markers, and colors.
 """
-function visualize(ax::Axis, ttn::TypedTensorNetwork, position_from_group::Dict{Int,Point2f})
+function FibTN.visualize(ax::Axis, ttn::TypedTensorNetwork, position_from_group::Dict{Int,Point2f})
     groups = get_groups(ttn.tn)
     positions = [position_from_group[g] for g in groups]
     colors = [tensor_color(ttn.tensortype_from_group[g]) for g in groups]
@@ -62,7 +60,7 @@ Wraps the TensorNetwork visualize function, creating (and returning) a new Makie
 `Axis`, hiding axis decorations, adding the `DataInspector`, and ensuring the layout is fitted
 correctly to the plotted objects.
 """
-function visualize(
+function FibTN.visualize(
     tn::TensorNetwork,
     groups::Vector{Int},
     positions::Vector{Point2f},
@@ -84,7 +82,7 @@ Wraps the TypedTensorNetwork visualize function, creating (and returning) a new 
 `Axis`, hiding axis decorations, adding the `DataInspector`, and ensuring the layout is fitted
 correctly to the plotted objects.
 """
-function visualize(ttn::TypedTensorNetwork, position_from_group::Dict{Int, Point2f})
+function FibTN.visualize(ttn::TypedTensorNetwork, position_from_group::Dict{Int, Point2f})
     f = Figure()
     ax = Axis(f[1, 1]; aspect=DataAspect())
     visualize(ax, ttn, position_from_group)
@@ -94,5 +92,3 @@ function visualize(ttn::TypedTensorNetwork, position_from_group::Dict{Int, Point
     resize_to_layout!(f)
     f, ax
 end
-
-end # module Visualizer

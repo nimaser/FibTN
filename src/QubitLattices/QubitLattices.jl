@@ -1,6 +1,6 @@
 module QubitLattices
 
 include("qubitlattice.jl")
-include("visualizer.jl")
+# visualizer in GLMakieVisualizationExt.jl
 
 end # module QubitLattices

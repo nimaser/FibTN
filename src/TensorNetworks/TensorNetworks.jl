@@ -3,7 +3,7 @@ module TensorNetworks
 # symbolic layer
 include("tensornetwork.jl")
 include("typedtensornetwork.jl")
-include("visualizer.jl")
+# visualizer in GLMakieVisualizationExt.jl
 
 # execution layer
 include("backends/tobackend.jl")

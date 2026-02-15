@@ -1,15 +1,15 @@
+using FibTN
 using FibTN.TensorNetworks
 using FibTN.TensorNetworks.TOBackend
-using FibTN.TensorNetworks.Visualizer
 
 using FibTN.QubitLattices
-using FibTN.QubitLattices.Visualizer
 
 using FibTN.FibTensorTypes
 using FibTN.SegmentTensorTypes
 
-using GLMakie, GeometryBasics
+using GeometryBasics
 using SparseArrayKit
+using Serialization
 
 const IL = IndexLabel
 const IC = IndexContraction
@@ -271,13 +271,12 @@ end
 """
 `w` and `h` are the dimension of the grid in plaquettes, not in tensors.
 """
-function grid(w::Int, h::Int)
+function grid(w::Int, h::Int; displayTN=true, displayQL=true, interactiveQL=false)
     w, h = w+1, h+1 # number of tensors is one more than number of plaquettes
     sg = SegmentGrid(w, h)
     ttn = create_segmentgrid_ttn(sg)
     assign_qubits(sg)
     ql = create_segmentgrid_ql(sg)
-
     # create tpos, positions of tensors
     tpos = Dict{Int, Point2f}()
     for i in 1:sg.w, j in 1:sg.h
@@ -290,24 +289,35 @@ function grid(w::Int, h::Int)
         merge!(ipos, sg.segments[i, j].ipos)
     end
     # display tensor network
-    f, ax = visualize(ttn, tpos)
-    display(GLMakie.Screen(), f)
-    # make dummy qubitvals to show lattice
-    #qubitvals = Dict(q => 1 for q in get_qubits(ql))
-    #f, ax = visualize(ql, ipos, [qubitvals], [1]; tail_length=√3/2)
-    #display(GLMakie.Screen(), f)
+    if displayTN
+        tnf, _ = visualize(ttn, tpos)
+        display(GLMakie.Screen(), tnf)
+    end
     # calculate results
     es = ExecutionState(ttn)
     execsteps = [ContractionStep(c) for c in get_contractions(ttn.tn)]
-    for execstep in execsteps execute_step!(es, execstep) end
+    for execstep in execsteps
+        execute_step!(es, execstep)
+    end
     et = es.tensor_from_id[only(get_ids(es))]
     inds, data = et.indices, et.data
     states, amps = get_states_and_amps(ql, inds, data)
     # plot results
-    if length(states) < 1
-        f, ax = visualize(ql, ipos, states, amps; tail_length=√3/2)
-    else
-        f, ax = visualize(ql, ipos, inds, data; tail_length=√3/2)
+    if displayQL
+        if interactiveQL
+            qlf, _ = visualize(ql, ipos, inds, data; tail_length=√3/2)
+        else
+            qlf, _ = visualize(ql, ipos, states, amps; tail_length=√3/2)
+        end
+        display(GLMakie.Screen(), qlf)
     end
-    display(GLMakie.Screen(), f)
+    ttn, tpos, ql, ipos, inds, data
+end
+
+function serialize_results(results::Any, casename::String)
+    serialize(pwd() * "/out/" * casename, results)
+end
+
+function deserialize_results(casename::String)
+    deserialize(pwd() * "/out/" * casename)
 end
