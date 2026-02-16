@@ -1,0 +1,135 @@
+(cstep.a, cstep.b) = (IndexLabel(1, :U), IndexLabel(4, :D))
+Base.summarysize(es) = 70728
+length(nonzero_pairs(t1.data)) = 2
+Base.summarysize(t1) = 1048
+length(nonzero_pairs(t2.data)) = 15
+Base.summarysize(t2) = 4240
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 24804208
+
+(cstep.a, cstep.b) = (IndexLabel(2, :U), IndexLabel(5, :D))
+Base.summarysize(es) = 67096
+length(nonzero_pairs(t1.data)) = 15
+Base.summarysize(t1) = 3704
+length(nonzero_pairs(t2.data)) = 47
+Base.summarysize(t2) = 17256
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 36105464
+
+(cstep.a, cstep.b) = (IndexLabel(3, :U), IndexLabel(6, :D))
+Base.summarysize(es) = 69608
+length(nonzero_pairs(t1.data)) = 5
+Base.summarysize(t1) = 1200
+length(nonzero_pairs(t2.data)) = 15
+Base.summarysize(t2) = 3704
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 24804008
+
+(cstep.a, cstep.b) = (IndexLabel(4, :U), IndexLabel(7, :D))
+Base.summarysize(es) = 69480
+length(nonzero_pairs(t1.data)) = 5
+Base.summarysize(t1) = 1656
+length(nonzero_pairs(t2.data)) = 15
+Base.summarysize(t2) = 4240
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 61797880
+
+(cstep.a, cstep.b) = (IndexLabel(5, :U), IndexLabel(8, :D))
+Base.summarysize(es) = 70504
+length(nonzero_pairs(t1.data)) = 150
+Base.summarysize(t1) = 23472
+length(nonzero_pairs(t2.data)) = 47
+Base.summarysize(t2) = 17256
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 1267976
+
+(cstep.a, cstep.b) = (IndexLabel(6, :U), IndexLabel(9, :D))
+Base.summarysize(es) = 558968
+length(nonzero_pairs(t1.data)) = 15
+Base.summarysize(t1) = 4776
+length(nonzero_pairs(t2.data)) = 15
+Base.summarysize(t2) = 3704
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 36087144
+
+(cstep.a, cstep.b) = (IndexLabel(7, :U), IndexLabel(10, :D))
+Base.summarysize(es) = 573960
+length(nonzero_pairs(t1.data)) = 13
+Base.summarysize(t1) = 6920
+length(nonzero_pairs(t2.data)) = 5
+Base.summarysize(t2) = 1352
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 150106664
+
+(cstep.a, cstep.b) = (IndexLabel(8, :U), IndexLabel(11, :D))
+Base.summarysize(es) = 574216
+length(nonzero_pairs(t1.data)) = 1545
+Base.summarysize(t1) = 529192
+length(nonzero_pairs(t2.data)) = 15
+Base.summarysize(t2) = 4240
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 6533400
+
+(cstep.a, cstep.b) = (IndexLabel(9, :U), IndexLabel(12, :D))
+Base.summarysize(es) = 2679512
+length(nonzero_pairs(t1.data)) = 47
+Base.summarysize(t1) = 23472
+length(nonzero_pairs(t2.data)) = 5
+Base.summarysize(t2) = 1048
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 41642408
+
+(cstep.a, cstep.b) = (IndexLabel(1, :R), IndexLabel(2, :L))
+Base.summarysize(es) = 2680536
+length(nonzero_pairs(t1.data)) = 13
+Base.summarysize(t1) = 8528
+length(nonzero_pairs(t2.data)) = 4965
+Base.summarysize(t2) = 2638728
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 524126088
+
+(cstep.a, cstep.b) = (IndexLabel(4, :R), IndexLabel(5, :L))
+Base.summarysize(es) = 4245160
+length(nonzero_pairs(t1.data)) = 10917
+Base.summarysize(t1) = 4211880
+length(nonzero_pairs(t2.data)) = 10917
+Base.summarysize(t2) = 4211880
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 332282352
+
+(cstep.a, cstep.b) = (IndexLabel(7, :R), IndexLabel(8, :L))
+Base.summarysize(es) = 3983144
+length(nonzero_pairs(t1.data)) = 4304
+Base.summarysize(t1) = 3949864
+length(nonzero_pairs(t2.data)) = 4304
+Base.summarysize(t2) = 3949864
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 268846176
+
+(cstep.a, cstep.b) = (IndexLabel(10, :R), IndexLabel(11, :L))
+Base.summarysize(es) = 956152
+length(nonzero_pairs(t1.data)) = 1545
+Base.summarysize(t1) = 922872
+length(nonzero_pairs(t2.data)) = 1545
+Base.summarysize(t2) = 922872
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 235826960
+
+(cstep.a, cstep.b) = (IndexLabel(2, :R), IndexLabel(3, :L))
+Base.summarysize(es) = 248520
+length(nonzero_pairs(t1.data)) = 481
+Base.summarysize(t1) = 215240
+length(nonzero_pairs(t2.data)) = 47
+Base.summarysize(t2) = 25544
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 272870296
+
+(cstep.a, cstep.b) = (IndexLabel(5, :R), IndexLabel(6, :L))
+Base.summarysize(es) = 4613048
+length(nonzero_pairs(t1.data)) = 3470
+Base.summarysize(t1) = 4605312
+length(nonzero_pairs(t2.data)) = 3470
+Base.summarysize(t2) = 4605312
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 6221792
+
+(cstep.a, cstep.b) = (IndexLabel(8, :R), IndexLabel(9, :L))
+Base.summarysize(es) = 1094856
+length(nonzero_pairs(t1.data)) = 1338
+Base.summarysize(t1) = 1087120
+length(nonzero_pairs(t2.data)) = 1338
+Base.summarysize(t2) = 1087120
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 598704
+
+(cstep.a, cstep.b) = (IndexLabel(11, :R), IndexLabel(12, :L))
+Base.summarysize(es) = 264344
+length(nonzero_pairs(t1.data)) = 481
+Base.summarysize(t1) = 256608
+length(nonzero_pairs(t2.data)) = 481
+Base.summarysize(t2) = 256608
+#= /home/nmaserang/FibTN/src/scripts/tobackendgrid.jl:72 =# @allocated(execute_step!(es, cstep)) = 560416

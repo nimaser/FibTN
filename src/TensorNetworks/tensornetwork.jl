@@ -1,6 +1,6 @@
-export IndexLabel, IndexContraction, TensorLabel, TensorNetwork
+export IndexLabel, IndexContraction, get_partner, TensorLabel, TensorNetwork
 export get_tensors, get_tensor, get_contractions, get_contraction, has_contraction
-export get_groups, get_indices, find_indices, has_index
+export get_groups, get_indices, find_indices, find_contracted, find_uncontracted, has_index
 export add_tensor!, add_contraction!
 export remove_tensor!, remove_contraction!, remove_contractions!
 export get_groups, regroup, combine!, matchcombine!
@@ -67,6 +67,10 @@ struct IndexContraction
         new(a, b)
     end
 end
+
+"""Returns the `IndexLabel` contracted with `il`."""
+get_partner(ic::IndexContraction, il::IndexLabel) =
+    ic.a == il ? ic.b : ic.a
 
 """
 A `TensorLabel` identifies a single tensor in a network. It has a `group`,
@@ -180,6 +184,14 @@ find_indices(tn::TensorNetwork, group::Int) =
 """Get all IndexLabels with port `port`."""
 find_indices(tn::TensorNetwork, port::Symbol) =
     find_indices(idx -> idx.port == port, tn)
+
+"""Get all `IndexLabel`s which are part of a contraction."""
+find_contracted(tn::TensorNetwork) =
+    find_indices(il -> has_contraction(tn, il), tn)
+
+"""Get all `IndexLabel`s which are not part of a contraction."""
+find_uncontracted(tn::TensorNetwork) =
+    find_indices(il -> !has_contraction(tn, il), tn)
 
 """Return whether `tn` has the IndexLabel `il`."""
 has_index(tn::TensorNetwork, il::IndexLabel) =

@@ -180,7 +180,7 @@ function FibTN.visualize(
             data[vals...]
         catch e
             # if we left the vertex-constraint subspace
-            e isa BoundsError ? 0 : rethrow(e)
+            e isa BoundsError ? 0.0 : rethrow(e)
         end
     end
     # create figure and axis
@@ -191,28 +191,34 @@ function FibTN.visualize(
     qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals; qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
     ax.title="$(get_amp(qubitvals))"
     # click callback function
+    deregister_interaction!(ax, :rectanglezoom)
+    toggled = Set{Int}()
     register_interaction!(ax, :toggle_qubit) do event::MouseEvent, ax
-        # discard non-leftclick
-        if event.type != MouseEventTypes.leftclick return end
-        if Keyboard.t ∉ events(f).keyboardstate return end
+        # discard non-leftdrag
+        if event.type == MouseEventTypes.leftup
+            empty!(toggled)
+            return
+        end
+        if event.type != MouseEventTypes.leftdrag &&
+           event.type != MouseEventTypes.leftdown return end
         # get the segment that was clicked, and check that it was our segments plot
-        p, i = pick(f)
+        p, i = pick(f, 20)
         if p != segmentsresult return end
         # get selected qubit
         idx = i ÷ 2
         q = qubits[idx]
+        if q ∈ toggled return end
         # toggle selected qubit
         qubitvals[q] = 1 - qubitvals[q]
+        push!(toggled, q)
         # update the ax title and segment display properties
         ax.title="$(get_amp(qubitvals))"
         colors_observable = segmentsresult.kw[:color]
         colors_observable[][idx] = qubitdisplayspec[:color][qubitvals[q]]
         notify(colors_observable)
-        #segmentsresult.kw[:linewidth][idx] = qubitdisplayspec[:linewidth][qubitvals[q]]
-        Consume(true)
     end
     # cleanup and return
-    DataInspector(f, range=30)
+    DataInspector(f, range=20)
     hidespines!(ax)
     hidedecorations!(ax)
     resize_to_layout!(f)

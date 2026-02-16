@@ -7,5 +7,6 @@ include("typedtensornetwork.jl")
 
 # execution layer
 include("backends/tobackend.jl")
+include("backends/itbackend.jl")
 
 end # module TensorNetworks
