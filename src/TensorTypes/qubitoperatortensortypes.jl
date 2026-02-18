@@ -1,4 +1,4 @@
-module QubitOperators
+module QubitOperatorTensorTypes
 
 using ..IndexTriplets
 using ..TensorNetworks
@@ -12,8 +12,9 @@ export QubitOperatorTensorType
 
 abstract type QubitOperatorTensorType <: TensorType end
 
-struct REFLECTOR <: FibTensorType end
-struct BOUNDARY <: FibTensorType end
+struct PAULI_X{N} <: QubitOperatorTensorType end
+struct PAULI_Z{N} <: QubitOperatorTensorType end
+struct PAULI_Y{N} <: QubitOperatorTensorType end
 
 ### TENSOR PORTS ###
 
@@ -41,19 +42,9 @@ function _generate_1_qubit_unitary_data(U::<:AbstractArray, qubit_idx::Int)
 end
 
 
-
-
-
-
-
-
-    end
-end
-
-
 ### TENSOR DISPLAY PROPERTIES ###
 
 
 
 
-end # module QubitOperators
+end # module QubitOperatorTensorTypes

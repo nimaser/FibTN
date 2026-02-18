@@ -65,11 +65,11 @@ data so that it aligns with the ports outputted by `tensor_ports`.
 """
 function _generate_tensor_data(::Type{T}) where {T<:SegmentTensorType}
     # this case is just an alias with different port names
-    if T == BELBOW return tensor_data(ELBOW_T) end
-    # alias ELBOW_T, but also add the boundary trivializer and reflectors
+    if T == BELBOW return tensor_data(ELBOW_T3) end
+    # alias ELBOW_T3, but also add the boundary trivializer and reflectors
     if T == TELBOW
         ttn = TypedTensorNetwork()
-        add_tensor!(ttn, 1, ELBOW_T)
+        add_tensor!(ttn, 1, ELBOW_T3)
         add_tensor!(ttn, 11, REFLECTOR)
         add_tensor!(ttn, 10, BOUNDARY)
         add_tensor!(ttn, 9, REFLECTOR)
@@ -111,25 +111,25 @@ function _generate_tensor_data(::Type{T}) where {T<:SegmentTensorType}
 end
 
 _segment_tensors(::Type{VERTEX_TVL_VERTEX}) =
-    (VERTEX, REFLECTOR, TAIL, REFLECTOR, VACUUMLOOP, REFLECTOR, VERTEX)
+    (VERTEX, REFLECTOR, ELBOW_T2, REFLECTOR, VACUUMLOOP, REFLECTOR, VERTEX)
 
 _segment_tensors(::Type{VERTEX_TVL_RELBOW}) =
-    (VERTEX, REFLECTOR, TAIL, REFLECTOR, VACUUMLOOP, REFLECTOR, TAIL)
+    (VERTEX, REFLECTOR, ELBOW_T2, REFLECTOR, VACUUMLOOP, REFLECTOR, ELBOW_T2)
 
 _segment_tensors(::Type{RELBOW_TVL_VERTEX}) =
-    (T_ELBOW, REFLECTOR, TAIL, REFLECTOR, VACUUMLOOP, REFLECTOR, VERTEX)
+    (ELBOW_T1, REFLECTOR, ELBOW_T2, REFLECTOR, VACUUMLOOP, REFLECTOR, VERTEX)
 
 _segment_tensors(::Type{RELBOW_TVL_RELBOW}) =
-    (T_ELBOW, REFLECTOR, TAIL, REFLECTOR, VACUUMLOOP, REFLECTOR, TAIL)
+    (ELBOW_T1, REFLECTOR, ELBOW_T2, REFLECTOR, VACUUMLOOP, REFLECTOR, ELBOW_T2)
 
 _segment_tensors(::Type{VERTEX_LELBOW}) =
-    (VERTEX, REFLECTOR, T_ELBOW)
+    (VERTEX, REFLECTOR, ELBOW_T1)
 
 _segment_tensors(::Type{LELBOW_VERTEX}) =
-    (TAIL, REFLECTOR, VERTEX)
+    (ELBOW_T2, REFLECTOR, VERTEX)
 
 _segment_tensors(::Type{LELBOW_LELBOW}) =
-    (TAIL, REFLECTOR, T_ELBOW)
+    (ELBOW_T2, REFLECTOR, ELBOW_T1)
 
 """
 Helper function to make the 7-tensor version of a segment. The
