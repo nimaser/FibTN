@@ -1,2 +1,2 @@
-include("FibTNTests.jl")
-FibTNTests.runtests()
+include("FibErrThreshTests.jl")
+FibErrThreshTests.runtests()

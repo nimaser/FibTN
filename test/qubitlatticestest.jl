@@ -1,7 +1,6 @@
-using FibTN.TensorNetworks
-using FibTN.IndexTriplets
-using FibTN.QubitLattices
-using Graphs
+using FibErrThresh.TensorNetworks
+using FibErrThresh.IndexTriplets
+using FibErrThresh.QubitLattices
 
 @testset "QubitLattice construction" begin
     ql = QubitLattice()
@@ -13,10 +12,10 @@ end
 @testset "QubitLattice index basics" begin
     ql = QubitLattice()
     a1 = IndexLabel(1, :a)
-    qubits = [1, 2, 3]
+    qubits = (1, 2, 3)
 
     # test that adding duplicate qubits causes an error
-    @test_throws "duplicate" add_index!(ql, a1, [1, 1, 2])
+    @test_throws "duplicate" add_index!(ql, a1, (1, 1, 2))
     @test isempty(get_qubits(ql))
     @test isempty(get_indices(ql))
 
@@ -43,16 +42,16 @@ end
     a1 = IndexLabel(1, :a)
     b2 = IndexLabel(2, :b)
 
-    # index with qubits [1, 2, 3]
-    add_index!(ql, a1, [1, 2, 3])
+    # index with qubits (1, 2, 3)
+    add_index!(ql, a1, (1, 2, 3))
     @test Set(get_qubits(ql)) == Set([1, 2, 3])
-    @test get_qubits(ql, a1) == [1, 2, 3]
+    @test get_qubits(ql, a1) == (1, 2, 3)
     @test Set(get_indices(ql)) == Set([a1])
 
-    # index with qubits [3, 4, 5]
-    add_index!(ql, b2, [3, 4, 5])
+    # index with qubits (3, 4, 5)
+    add_index!(ql, b2, (3, 4, 5))
     @test Set(get_qubits(ql)) == Set([1, 2, 3, 4, 5])
-    @test get_qubits(ql, b2) == [3, 4, 5]
+    @test get_qubits(ql, b2) == (3, 4, 5)
     @test Set(get_indices(ql)) == Set([a1, b2])
 
     # check qubit -> index mapping
@@ -71,14 +70,14 @@ end
     i3 = IndexLabel(3, :q)
 
     # create a triangle
-    add_index!(ql, i1, [1, 2, 4])
-    add_index!(ql, i2, [2, 3, 5])
-    add_index!(ql, i3, [3, 1, 6])
+    add_index!(ql, i1, (1, 2, 4))
+    add_index!(ql, i2, (2, 3, 5))
+    add_index!(ql, i3, (3, 1, 6))
 
     @test Set(get_qubits(ql)) == Set([1, 2, 3, 4, 5, 6])
-    @test get_qubits(ql, i1) == [1, 2, 4]
-    @test get_qubits(ql, i2) == [2, 3, 5]
-    @test get_qubits(ql, i3) == [3, 1, 6]
+    @test get_qubits(ql, i1) == (1, 2, 4)
+    @test get_qubits(ql, i2) == (2, 3, 5)
+    @test get_qubits(ql, i3) == (3, 1, 6)
 
     # check qubit -> index mapping
     @test Set(QubitLattices.get_indices(ql)) == Set([i1, i2, i3])
@@ -96,7 +95,7 @@ end
 @testset "QubitLattice extraction basics" begin
     ql = QubitLattice()
     idx = IndexLabel(1, :p)
-    add_index!(ql, idx, [7, 9, 1])
+    add_index!(ql, idx, (7, 9, 1))
 
     # check that correct values are returned and in the right order
     for val in 1:5
@@ -106,17 +105,17 @@ end
 
     # add index with shared qubit 7, check that inconsistency errors
     idx2 = IndexLabel(2, :p)
-    add_index!(ql, idx2, [7, 4, 2])
+    add_index!(ql, idx2, (7, 4, 2))
     @test_throws ErrorException idxvals2qubitvals(ql, [idx, idx2], [1, 5])
 end
 
 @testset "QubitLattice extraction no unpaired" begin
     ql = QubitLattice()
     # tetrahedron projected onto plane
-    add_index!(ql, IndexLabel(1, :p), [1, 2, 3])
-    add_index!(ql, IndexLabel(4, :p), [2, 4, 6])
-    add_index!(ql, IndexLabel(3, :p), [5, 6, 1])
-    add_index!(ql, IndexLabel(2, :p), [3, 4, 5])
+    add_index!(ql, IndexLabel(1, :p), (1, 2, 3))
+    add_index!(ql, IndexLabel(4, :p), (2, 4, 6))
+    add_index!(ql, IndexLabel(3, :p), (5, 6, 1))
+    add_index!(ql, IndexLabel(2, :p), (3, 4, 5))
     inds = [
         IndexLabel(1, :p),
         IndexLabel(4, :p),
@@ -202,9 +201,9 @@ end
 @testset "QubitLattice extraction unpaired" begin
     ql = QubitLattice()
     # triangle
-    add_index!(ql, IndexLabel(2, :p), [3, 5, 4])
-    add_index!(ql, IndexLabel(3, :p), [5, 1, 6])
-    add_index!(ql, IndexLabel(1, :p), [1, 3, 2])
+    add_index!(ql, IndexLabel(2, :p), (3, 5, 4))
+    add_index!(ql, IndexLabel(3, :p), (5, 1, 6))
+    add_index!(ql, IndexLabel(1, :p), (1, 3, 2))
     inds = [
         IndexLabel(2, :p),
         IndexLabel(3, :p),
@@ -247,9 +246,9 @@ end
     i1 = IndexLabel(1, :q)
     i2 = IndexLabel(2, :q)
     i3 = IndexLabel(3, :q)
-    add_index!(ql, i1, [1, 0, 2])
-    add_index!(ql, i2, [0, 1, 3])
-    add_index!(ql, i3, [2, 3, 0])
+    add_index!(ql, i1, (1, 0, 2))
+    add_index!(ql, i2, (0, 1, 3))
+    add_index!(ql, i3, (2, 3, 0))
 
     @test 0 ∉ ql._unpaired_qubits
     @test idxval2qubitvals(ql, i1, 3) == Dict(1 => 1, 0 => 0, 2 => 1)

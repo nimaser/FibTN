@@ -1,4 +1,4 @@
-using FibTN.TensorNetworks
+using FibErrThresh.TensorNetworks
 
 using GLMakie, GeometryBasics
 
@@ -12,8 +12,11 @@ contraction using a linesegment. Modifies the hover tooltip of the GLMakie
 DataInspector so:
 - hovering over an edge shows the contracted indices
 - hovering over a node shows the tensor group number
+
+Inputs are sorted by group so that the scatter index `i` corresponds to the
+`i`-th element in group-sorted order, enabling reliable inspector lookups.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ax::Axis,
     tn::TensorNetwork,
     groups::Vector{Int},
@@ -21,6 +24,13 @@ function FibTN.visualize(
     colors::Vector{Symbol},
     markers::Vector{Symbol},
 )
+    # sort all display arrays by group so scatter index i == sorted index i
+    order = sortperm(groups)
+    groups    = groups[order]
+    positions = positions[order]
+    colors    = colors[order]
+    markers   = markers[order]
+
     position_from_group = Dict(g => p for (g, p) in zip(groups, positions))
     # get endpoints of edges
     edge_endpoints = []
@@ -37,7 +47,7 @@ function FibTN.visualize(
         ic = tnc[i]
         "$(ic.a.group) $(ic.a.port)\n$(ic.b.group) $(ic.b.port)"
     end
-    # scatterplot to represent tensors
+    # scatterplot to represent tensors (plotted in group-sorted order)
     scatterresult = scatter!(ax, positions, color=colors, marker=markers, markersize=40)
     scatterresult.inspector_label = (plot, i, idx) -> "$(groups[i])"
     autolimits!(ax) # compute limits based on the axis content
@@ -47,7 +57,7 @@ end
 """
 Wraps the TensorNetwork visualize function, autofilling the groups, markers, and colors.
 """
-function FibTN.visualize(ax::Axis, ttn::TypedTensorNetwork, position_from_group::Dict{Int,Point2f})
+function FibErrThresh.visualize(ax::Axis, ttn::TypedTensorNetwork, position_from_group::Dict{Int,Point2f})
     groups = get_groups(ttn.tn)
     positions = [position_from_group[g] for g in groups]
     colors = [tensor_color(ttn.tensortype_from_group[g]) for g in groups]
@@ -60,7 +70,7 @@ Wraps the TensorNetwork visualize function, creating (and returning) a new Makie
 `Axis`, hiding axis decorations, adding the `DataInspector`, and ensuring the layout is fitted
 correctly to the plotted objects.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     tn::TensorNetwork,
     groups::Vector{Int},
     positions::Vector{Point2f},
@@ -82,7 +92,7 @@ Wraps the TypedTensorNetwork visualize function, creating (and returning) a new 
 `Axis`, hiding axis decorations, adding the `DataInspector`, and ensuring the layout is fitted
 correctly to the plotted objects.
 """
-function FibTN.visualize(ttn::TypedTensorNetwork, position_from_group::Dict{Int, Point2f})
+function FibErrThresh.visualize(ttn::TypedTensorNetwork, position_from_group::Dict{Int, Point2f})
     f = Figure()
     ax = Axis(f[1, 1]; aspect=DataAspect())
     visualize(ax, ttn, position_from_group)

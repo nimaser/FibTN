@@ -1,4 +1,4 @@
-using FibTN.TensorNetworks
+using FibErrThresh.TensorNetworks
 
 @testset "IndexLabel basics" begin
     # IndexLabel construction
@@ -116,9 +116,11 @@ end
 
     # cannot contract index not in network
     @test_throws ArgumentError add_contraction!(tn, IndexContraction(a1, a2))
+    @test !try_contraction!(tn, IndexContraction(a1, a2))
 
     # cannot contract same indices twice
     @test_throws ArgumentError add_contraction!(tn, ic)
+    @test !try_contraction!(tn, ic)
 
     # add_tensor! again
     add_tensor!(tn, tl2)
@@ -128,9 +130,9 @@ end
     @test get_tensor(tn, c1) === tl1
     @test get_tensor(tn, a2) === tl2
 
-    # different tensors add_contraction!
+    # try_contraction!
     ic2 = IndexContraction(c1, a2)
-    add_contraction!(tn, ic2)
+    @test try_contraction!(tn, ic2)
 
     @test length(get_contractions(tn)) == 2
     @test get_contraction(tn, a2) == ic2
@@ -220,6 +222,11 @@ end
     # has_index
     @test has_index(tn, IndexLabel(1, :a)) == true
     @test has_index(tn, IndexLabel(3, :b)) == false
+
+    # contracted and uncontracted
+    @test Set(find_uncontracted(tn)) == Set([c1])
+    @test Set(find_contracted(tn)) == Set([a1, b1, a3, b5])
+
 end
 
 @testset "TensorNetwork remove" begin
@@ -270,6 +277,85 @@ end
     @test_throws KeyError get_contraction(tn, b1)
     @test_throws KeyError get_contraction(tn, c1)
     remove_tensor!(tn, tl1)
+end
+
+@testset "TensorNetwork self-contraction" begin
+    # a tensor can contract two of its own indices
+    tn = TensorNetwork()
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    c1 = IndexLabel(1, :c)
+
+    tl1 = TensorLabel(1, [a1, b1, c1])
+    add_tensor!(tn, tl1)
+
+    # self-contraction: contract two indices on the same tensor
+    ic = IndexContraction(a1, b1)
+    add_contraction!(tn, ic)
+    @test has_contraction(tn, a1)
+    @test has_contraction(tn, b1)
+    @test !has_contraction(tn, c1)
+    @test get_contraction(tn, a1) == ic
+    @test get_tensor(tn, a1) == get_tensor(tn, b1)
+end
+
+@testset "TensorNetwork replace_tensor!" begin
+    # star topology: one central tensor connected to three others
+    # C[center1, a1, b1, c1] * A[a2] * B[b3] * D[c4]
+    tn = TensorNetwork()
+
+    center1 = IndexLabel(1, :center)
+    a1 = IndexLabel(1, :a)
+    b1 = IndexLabel(1, :b)
+    c1 = IndexLabel(1, :c)
+    a2 = IndexLabel(2, :a)
+    b3 = IndexLabel(3, :b)
+    c4 = IndexLabel(4, :c)
+
+    tl1 = TensorLabel(1, [center1, a1, b1, c1])
+    tl2 = TensorLabel(2, [a2])
+    tl3 = TensorLabel(3, [b3])
+    tl4 = TensorLabel(4, [c4])
+
+    add_tensor!(tn, tl1)
+    add_tensor!(tn, tl2)
+    add_tensor!(tn, tl3)
+    add_tensor!(tn, tl4)
+
+    ic1 = IndexContraction(a1, a2)
+    ic2 = IndexContraction(b1, b3)
+    ic3 = IndexContraction(c1, c4)
+    add_contraction!(tn, ic1)
+    add_contraction!(tn, ic2)
+    add_contraction!(tn, ic3)
+
+    # replace central tensor with one that has an extra index
+    d1 = IndexLabel(1, :d)
+    tl1_new = TensorLabel(1, [center1, a1, b1, c1, d1])
+    replace_tensor!(tn, tl1, tl1_new)
+    @test get_tensor(tn, 1) == tl1_new
+    @test has_index(tn, d1)
+    @test length(get_contractions(tn)) == 3
+    @test get_contraction(tn, a1) == ic1
+    @test get_contraction(tn, b1) == ic2
+    @test get_contraction(tn, c1) == ic3
+
+    # replace again, preserving only one contraction
+    tl1_new2 = TensorLabel(1, [center1, a1, b1, c1, d1])
+    replace_tensor!(tn, tl1_new, tl1_new2; preserve_contractions=[a1])
+    @test get_tensor(tn, 1) == tl1_new2
+    @test has_contraction(tn, a1)
+    @test !has_contraction(tn, b1)
+    @test !has_contraction(tn, c1)
+    @test length(get_contractions(tn)) == 1
+
+    # error: mismatched group
+    tl_bad = TensorLabel(5, [IndexLabel(5, :a)])
+    @test_throws ArgumentError replace_tensor!(tn, tl1_new2, tl_bad)
+
+    # error: old indices not subset of new (missing d1)
+    tl_missing = TensorLabel(1, [center1, a1, b1, c1])
+    @test_throws ArgumentError replace_tensor!(tn, tl1_new2, tl_missing)
 end
 
 @testset "TensorNetwork combine!" begin

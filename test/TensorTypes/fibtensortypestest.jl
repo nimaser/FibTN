@@ -1,17 +1,23 @@
-using FibTN.FibTensorTypes
+using FibErrThresh.FibTensorTypes
 
 @testset "FibTensorTypes basics" begin
     # verify that port and tensor data are returned without errors
 
-    tensortypes = [REFLECTOR,
+    tensortypes = [
+        REFLECTOR,
         BOUNDARY,
         VACUUMLOOP,
+        ELBOW_T1,
+        ELBOW_T2,
+        ELBOW_T3,
         TAIL,
-        T_ELBOW,
-        ELBOW_T,
         VERTEX,
         CROSSING,
         FUSION,
+        STRINGEND,
+        EXCITATION,
+        FUSIONTREEROOT,
+        DOUBLEDFUSION,
     ]
 
     ϕ = (1 + √5) / 2
@@ -34,34 +40,35 @@ using FibTN.FibTensorTypes
         0 1 0 0 0;
         0 0 0 0 ϕ]
 
-    taildata = zeros(Float64, 5, 5, 5)
-    taildata[1, 1, 1] = 1
-    taildata[2, 4, 3] = 1
-    taildata[3, 3, 1] = 1
-    taildata[4, 2, 3] = 1
-    taildata[5, 5, 3] = 1
+    elbow_t2_data = zeros(Float64, 5, 5, 5)
+    elbow_t2_data[1, 1, 1] = 1
+    elbow_t2_data[2, 4, 3] = 1
+    elbow_t2_data[3, 3, 1] = 1
+    elbow_t2_data[4, 2, 3] = 1
+    elbow_t2_data[5, 5, 3] = 1
 
-    t_elbowdata = zeros(Float64, 5, 5, 5)
-    t_elbowdata[1, 1, 1] = 1
-    t_elbowdata[2, 4, 2] = 1
-    t_elbowdata[3, 3, 1] = 1
-    t_elbowdata[4, 2, 2] = 1
-    t_elbowdata[5, 5, 2] = 1
+    elbow_t1_data = zeros(Float64, 5, 5, 5)
+    elbow_t1_data[1, 1, 1] = 1
+    elbow_t1_data[2, 4, 2] = 1
+    elbow_t1_data[3, 3, 1] = 1
+    elbow_t1_data[4, 2, 2] = 1
+    elbow_t1_data[5, 5, 2] = 1
 
-    elbow_tdata = zeros(Float64, 5, 5, 5)
-    elbow_tdata[1, 1, 1] = 1
-    elbow_tdata[2, 4, 4] = 1
-    elbow_tdata[3, 3, 1] = 1
-    elbow_tdata[4, 2, 4] = 1
-    elbow_tdata[5, 5, 4] = 1
+    elbow_t3_data = zeros(Float64, 5, 5, 5)
+    elbow_t3_data[1, 1, 1] = 1
+    elbow_t3_data[2, 4, 4] = 1
+    elbow_t3_data[3, 3, 1] = 1
+    elbow_t3_data[4, 2, 4] = 1
+    elbow_t3_data[5, 5, 4] = 1
 
     # for some tensors also check the data matches expected matrix
     tensordata = Dict(REFLECTOR => reflectordata,
         BOUNDARY => boundarydata,
         VACUUMLOOP => vacuumloopdata,
-        TAIL => taildata,
-        T_ELBOW => t_elbowdata,
-        ELBOW_T => elbow_tdata,
+        ELBOW_T1 => elbow_t1_data,
+        ELBOW_T2 => elbow_t2_data,
+        ELBOW_T3 => elbow_t3_data,
+        TAIL => elbow_t2_data,
     )
 
     for tt in tensortypes

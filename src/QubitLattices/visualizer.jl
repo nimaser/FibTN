@@ -1,5 +1,5 @@
-using FibTN.QubitLattices
-using FibTN.TensorNetworks
+using FibErrThresh.QubitLattices
+using FibErrThresh.TensorNetworks
 
 using GLMakie, GeometryBasics
 
@@ -23,7 +23,7 @@ All unpaired qubits are displayed as tails of length `tail_length`.
 Custom display properties for qubit values 0 and 1 should be provided via
 the `qubitdisplayspec` parameter.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ax::Axis,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
@@ -64,6 +64,20 @@ function FibTN.visualize(
     qubits, segmentsresult
 end
 
+"""Plots `ql` on `ax` with all qubits set to 0, for lattice visualization purposes."""
+function FibErrThresh.visualize(
+    ax::Axis,
+    ql::QubitLattice,
+    position_from_index::Dict{IndexLabel, Point2f};
+    qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
+    tail_length::Real=0.3
+)
+    qubitvals = Dict(q => 0 for q in get_qubits(ql))
+    visualize(ax, ql, position_from_index, qubitvals;
+        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
+end
+
+
 """
 Plots `states` and corresponding `amps` onto a figure with a scrollable set of 'panes',
 each of which can contain at most `maxstatesperpane` states. Left and right buttons can
@@ -73,7 +87,7 @@ Returns a Makie `Figure` and array of axes.
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     states::Vector{Dict{Int, Int}},
@@ -133,9 +147,13 @@ function FibTN.visualize(
         for i in 1:length(pane_amps)
             axs[i].title="$(pane_amps[i])"
         end
-        # plot the states
+        # plot the states; hide unused axes so DataInspector doesn't crash on them
         for i in 1:length(pane_states)
             visualize(axs[i], ql, position_from_index, pane_states[i]; qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
+            axs[i].scene.visible[] = true
+        end
+        for i in length(pane_states)+1:length(axs)
+            axs[i].scene.visible[] = false
         end
     end
     # finalize slider interaction
@@ -158,14 +176,17 @@ function FibTN.visualize(
 end
 
 """
-Interactive view of the qubit lattice: left-clicking an edge will toggle its value,
-allowing exploration of the amplitudes of different states.
+Interactive view of the qubit lattice on `ax`: left-clicking an edge toggles its value,
+allowing exploration of the amplitudes of different states. `f` must be the `Figure`
+containing `ax`; it is needed for pixel-accurate picking.
 
-Returns a Makie `Figure` and `Axis`.
+Caller is responsible for cleanup (hiding decorations, `DataInspector`, etc.).
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
+    f::Figure,
+    ax::Axis,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     inds::Vector{IndexLabel},
@@ -183,12 +204,10 @@ function FibTN.visualize(
             e isa BoundsError ? 0.0 : rethrow(e)
         end
     end
-    # create figure and axis
-    f = Figure()
-    ax = Axis(f[1, 1]; aspect=DataAspect())
     # plot all 0 state and put amplitude
     qubitvals = Dict(q => 0 for q in get_qubits(ql))
-    qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals; qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
+    qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals;
+        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
     ax.title="$(get_amp(qubitvals))"
     # click callback function
     deregister_interaction!(ax, :rectanglezoom)
@@ -217,7 +236,28 @@ function FibTN.visualize(
         colors_observable[][idx] = qubitdisplayspec[:color][qubitvals[q]]
         notify(colors_observable)
     end
-    # cleanup and return
+    nothing
+end
+
+"""
+Interactive view of the qubit lattice: left-clicking an edge toggles its value,
+allowing exploration of the amplitudes of different states. Creates and returns a
+new `Figure` and `Axis`.
+
+Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
+"""
+function FibErrThresh.visualize(
+    ql::QubitLattice,
+    position_from_index::Dict{IndexLabel, Point2f},
+    inds::Vector{IndexLabel},
+    data::AbstractArray;
+    qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
+    tail_length::Real=0.5,
+)
+    f = Figure()
+    ax = Axis(f[1, 1]; aspect=DataAspect())
+    visualize(f, ax, ql, position_from_index, inds, data;
+        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
     DataInspector(f, range=20)
     hidespines!(ax)
     hidedecorations!(ax)

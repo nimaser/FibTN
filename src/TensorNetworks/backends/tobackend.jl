@@ -6,7 +6,7 @@ import ..TensorNetworks: get_tensors, get_tensor, get_indices # to merge method 
 
 export ExecutionTensor, ExecutionState, ExecutionStep, execute_step!
 export get_ids, get_indices, get_tensors, get_tensor
-export PermuteIndicesStep, ContractionStep, FetchResultStep
+export PermuteIndicesStep, ContractionStep, OuterProductStep, FetchResultStep
 
 """
 Represents a single tensor (in the sense of one numerical array in
@@ -134,6 +134,19 @@ struct ContractionStep <: ExecutionStep
 end
 
 """
+Outer (tensor) product of two ExecutionTensors.
+
+`a` and `b` are IndexLabels, one from each tensor, used at execution time
+to look up the two tensors. No indices are shared or contracted — the result
+has ndims(A) + ndims(B) dimensions, with all indices from A followed by all
+indices from B.
+"""
+struct OuterProductStep <: ExecutionStep
+    a::IndexLabel
+    b::IndexLabel
+end
+
+"""
 Multiple index pair contractions, grouped together to exploit backend
 optimizations.
 """
@@ -223,6 +236,45 @@ function execute_step!(es::ExecutionState, cs::ContractionStep)
         es.id_from_index[idx] = new_id
     end
     # update overall id counter
+    es._next_id += 1
+
+    return nothing
+end
+
+function execute_step!(es::ExecutionState, ops::OuterProductStep)
+    ida = es.id_from_index[ops.a]
+    idb = es.id_from_index[ops.b]
+    ida == idb && throw(ArgumentError("outer product of a tensor with itself is not supported; use tensortrace instead"))
+    eta = es.tensor_from_id[ida]
+    etb = es.tensor_from_id[idb]
+
+    na = length(eta.indices)
+    nb = length(etb.indices)
+    # all index slots are distinct — no shared labels between A and B
+    IA = collect(1:na)
+    IB = collect(na+1:na+nb)
+
+    # outer product: C has all dims of A followed by all dims of B
+    Z = tensorproduct(eta.data, IA, false, etb.data, IB, false)
+    new_indices = vcat(copy(eta.indices), copy(etb.indices))
+    new_id = es._next_id
+    new_groups = union(eta.groups, etb.groups)
+    etz = ExecutionTensor(new_id, new_groups, new_indices, Z)
+
+    # remove old tensors and index entries
+    delete!(es.tensor_from_id, ida)
+    delete!(es.tensor_from_id, idb)
+    for idx in eta.indices
+        delete!(es.id_from_index, idx)
+    end
+    for idx in etb.indices
+        delete!(es.id_from_index, idx)
+    end
+    # register new tensor
+    es.tensor_from_id[new_id] = etz
+    for idx in new_indices
+        es.id_from_index[idx] = new_id
+    end
     es._next_id += 1
 
     return nothing

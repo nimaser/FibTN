@@ -26,7 +26,7 @@ indices 'disagree' on a qubit they both code for, an error will also
 be raised.
 """
 struct QubitLattice
-    qubits_from_index::Dict{IndexLabel,Vector{Int}}
+    qubits_from_index::Dict{IndexLabel,NTuple{3,Int}}
     indices_from_qubit::Dict{Int,Vector{IndexLabel}}
     _unpaired_qubits::Vector{Int}
     QubitLattice() = new(Dict(), Dict(), [])
@@ -41,16 +41,15 @@ get_indices(ql::QubitLattice, q::Int) = ql.indices_from_qubit[q]
 """Gets a `KeySet` of all qubits added to `ql`."""
 get_qubits(ql::QubitLattice) = keys(ql.indices_from_qubit)
 
-"""Gets a `Vector{Int}` of all qubits coded for by `il`."""
+"""Gets the `NTuple{3,Int}` of qubits coded for by `il`."""
 get_qubits(ql::QubitLattice, il::IndexLabel) = ql.qubits_from_index[il]
 
 """
-Sets `idx` as encoding for qubits listed in `qubits` to `ql`. Assumes that
-the encoding is in the order that qubits are listed in `qubits`, as in
-if split_index is called on a value for `idx` giving a result `vals`,
-it is assumed that `qubits[1]` takes the value `vals[1]`, etc.
+Sets `idx` as encoding for the three qubits in `qubits` in `ql`. The encoding
+order matches position: if `split_index` called on a value for `idx` gives `vals`,
+then `qubits[p]` takes the value `vals[p]` for each position `p`.
 """
-function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::Vector{Int})
+function add_index!(ql::QubitLattice, idx::IndexLabel, qubits::NTuple{3,Int})
     # check that there are no duplicate qubits or indices
     if haskey(ql.qubits_from_index, idx)
         error("index $idx already mapped to qubits")
@@ -126,24 +125,8 @@ function qubitvals2idxvals(ql::QubitLattice, qubitvals::Dict{Int,Int}; inds::Vec
     !haskey(qubitvals, 0) || qubitvals[0] == 0 || throw(ArgumentError("qubit 0 nontrivial"))
     vals = Vector{Int}()
     for idx in inds
-        push!(vals, combine_indices(collect(qubitvals[q] for q in ql.qubits_from_index[idx])...))
+        t = ql.qubits_from_index[idx]
+        push!(vals, combine_qubits(qubitvals[t[1]], qubitvals[t[2]], qubitvals[t[3]]))
     end
     inds, vals
 end
-
-using SparseArrayKit # TODO deal with this hardcoded tensor backend
-"""
-Convert tensor indices and data to a set of states and state amplitudes using the mapping
-established by `ql`. A state, in this context, is a mapping from qubit ids to qubit values.
-
-Returns corresponding lists of states and amps.
-"""
-function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
-    states, amps = Vector{Dict{Int, Int}}(), Vector{Real}()
-    for (cartesian_idxvals, amp) in nonzero_pairs(data)
-        push!(states, idxvals2qubitvals(ql, inds, [Tuple(cartesian_idxvals)...]))
-        push!(amps, amp)
-    end
-    states, amps
-end
-#TODO add tests for this function somewhere

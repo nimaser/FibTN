@@ -1,8 +1,9 @@
 export IndexLabel, IndexContraction, get_partner, TensorLabel, TensorNetwork
 export get_tensors, get_tensor, get_contractions, get_contraction, has_contraction
-export get_groups, get_indices, find_indices, find_contracted, find_uncontracted, has_index
-export add_tensor!, add_contraction!
-export remove_tensor!, remove_contraction!, remove_contractions!
+export get_groups, get_indices, find_indices, find_contracted, find_uncontracted
+export has_index, can_contract
+export add_tensor!, add_contraction!, try_contraction!
+export remove_tensor!, remove_contraction!, remove_contractions!, replace_tensor!
 export get_groups, regroup, combine!, matchcombine!
 
 """
@@ -130,6 +131,8 @@ struct TensorNetwork
     TensorNetwork() = new([], [], Dict(), Dict())
 end
 
+### GETTERS ###
+
 """Get all `TensorLabel`s in `tn`."""
 get_tensors(tn::TensorNetwork) =
     tn._tensors
@@ -166,6 +169,14 @@ get_groups(tn::TensorNetwork) =
 get_indices(tn::TensorNetwork) =
     keys(tn._tensor_with_index)
 
+"""Return whether `tn` has the IndexLabel `il`."""
+has_index(tn::TensorNetwork, il::IndexLabel) =
+    haskey(tn._tensor_with_index, il)
+
+"""Return whether `tn` has `il` and `il` is uncontracted."""
+can_contract(tn::TensorNetwork, il::IndexLabel) =
+    has_index(tn, il) && !has_contraction(tn, il)
+
 """Get all IndexLabels for which `f` returns true."""
 function find_indices(f::Function, tn::TensorNetwork)
     matches = Vector{IndexLabel}()
@@ -193,9 +204,7 @@ find_contracted(tn::TensorNetwork) =
 find_uncontracted(tn::TensorNetwork) =
     find_indices(il -> !has_contraction(tn, il), tn)
 
-"""Return whether `tn` has the IndexLabel `il`."""
-has_index(tn::TensorNetwork, il::IndexLabel) =
-    !isempty(find_indices(idx -> il.group == idx.group && il.port == idx.port, tn))
+### MUTATORS ###
 
 """
 Adds the TensorLabel `tl` to the TensorNetwork `tn`, ensuring that all
@@ -204,13 +213,14 @@ indices are unique.
 function add_tensor!(tn::TensorNetwork, tl::TensorLabel)
     # check IndexLabel uniqueness
     for il in tl.indices
-        !haskey(tn._tensor_with_index, il) || throw(ArgumentError("duplicate IndexLabel $il"))
+        !has_index(tn, il) || throw(ArgumentError("duplicate IndexLabel $il"))
     end
     # add and adjust bookkeeping
     push!(tn._tensors, tl)
     for idx in tl.indices
         tn._tensor_with_index[idx] = tl
     end
+    nothing
 end
 
 """
@@ -219,15 +229,26 @@ the referenced IndexLabels exist in the network and that they are not
 already part of some other IndexContraction.
 """
 function add_contraction!(tn::TensorNetwork, ic::IndexContraction)
-    # check that indices are present and haven't yet been contracted
-    haskey(tn._tensor_with_index, ic.a) || throw(ArgumentError("index $(ic.a) not found in network"))
-    haskey(tn._tensor_with_index, ic.b) || throw(ArgumentError("index $(ic.b) not found in network"))
-    !haskey(tn._contraction_with_index, ic.a) || throw(ArgumentError("index $(ic.a) has already been contracted"))
-    !haskey(tn._contraction_with_index, ic.b) || throw(ArgumentError("idnex $(ic.b) has already been contracted"))
-    # add and adjust bookkeeping
+    has_index(tn, ic.a) || throw(ArgumentError("index $(ic.a) not found in network"))
+    has_index(tn, ic.b) || throw(ArgumentError("index $(ic.b) not found in network"))
+    !has_contraction(tn, ic.a) || throw(ArgumentError("index $(ic.a) has already been contracted"))
+    !has_contraction(tn, ic.b) || throw(ArgumentError("index $(ic.b) has already been contracted"))
     push!(tn._contractions, ic)
     tn._contraction_with_index[ic.a] = ic
     tn._contraction_with_index[ic.b] = ic
+    nothing
+end
+
+"""
+Attempts to add the IndexContraction `ic` to `tn`, returning whether it was successful.
+"""
+function try_contraction!(tn::TensorNetwork, ic::IndexContraction)
+    success = false
+    if can_contract(tn, ic.a) && can_contract(tn, ic.b)
+        add_contraction!(tn, ic)
+        success = true
+    end
+    success
 end
 
 """
@@ -238,13 +259,14 @@ indices exist.
 function remove_tensor!(tn::TensorNetwork, tl::TensorLabel)
     # check that tensor has no contractions
     for idx in tl.indices
-        !haskey(tn._contraction_with_index, idx) || throw(ArgumentError("tensor must not have contracted indices, found $(tn._contraction_with_index[idx])"))
+        !has_contraction(tn, idx) || throw(ArgumentError("tensor must not have contracted indices, found $(get_contraction(tn, idx))"))
     end
     # remove it
     filter!(!=(tl), tn._tensors)
     for idx in tl.indices
         delete!(tn._tensor_with_index, idx)
     end
+    nothing
 end
 
 """
@@ -258,6 +280,7 @@ function remove_contraction!(tn::TensorNetwork, ic::IndexContraction)
     filter!(!=(ic), tn._contractions)
     delete!(tn._contraction_with_index, ic.a)
     delete!(tn._contraction_with_index, ic.b)
+    nothing
 end
 
 """
@@ -266,10 +289,51 @@ TensorLabel `tl`.
 """
 function remove_contractions!(tn::TensorNetwork, tl::TensorLabel)
     for idx in tl.indices
-        if haskey(tn._contraction_with_index, idx)
-            remove_contraction!(tn, tn._contraction_with_index[idx])
+        if has_contraction(tn, idx)
+            remove_contraction!(tn, get_contraction(tn, idx))
         end
     end
+    nothing
+end
+
+"""
+Replaces `old` with `new` in `tn`. Both must have the same group, and
+every index in `old` must also appear in `new` (the new tensor may have
+additional indices). By default all contractions on `old`'s indices are
+preserved. If `preserve_contractions` is provided, only contractions
+involving those indices are kept; others are removed.
+"""
+function replace_tensor!(tn::TensorNetwork, old::TensorLabel, new::TensorLabel;
+                          preserve_contractions::Union{Nothing,Vector{IndexLabel}}=nothing)
+    # validate replacement
+    old.group == new.group || throw(ArgumentError("old and new must have the same group"))
+    old_indices = Set(old.indices)
+    new_indices = Set(new.indices)
+    old_indices ⊆ new_indices || throw(ArgumentError("all indices in old must appear in new"))
+    # validate contraction preservation
+    if preserve_contractions === nothing
+        preserve_contractions = old_indices
+    else
+        preserve_contractions = Set(preserve_contractions)
+        preserve_contractions ⊆ old_indices || throw(ArgumentError("cannot preserve an index not in old tensor"))
+    end
+    # collect contractions to preserve
+    preserved = IndexContraction[]
+    for idx in old.indices
+        if has_contraction(tn, idx) && idx ∈ preserve_contractions
+            push!(preserved, get_contraction(tn, idx))
+        end
+    end
+    unique!(preserved) # in case a tensor has self-contractions
+    # remove all contractions on old tensor, then remove old tensor
+    remove_contractions!(tn, old)
+    remove_tensor!(tn, old)
+    # add new tensor and re-add preserved contractions
+    add_tensor!(tn, new)
+    for ic in preserved
+        add_contraction!(tn, ic)
+    end
+    nothing
 end
 
 """
@@ -300,8 +364,7 @@ function combine!(tn1::TensorNetwork, tn2::TensorNetwork)
     for (old, new) in group_map
         add_tensor!(tn1, regroup(get_tensor(tn2, old), new))
     end
-    # add tn2 contractions to tn1
-    for oldc in tn2._contractions
+    for oldc in get_contractions(tn2)
         a = regroup(oldc.a, group_map[oldc.a.group])
         b = regroup(oldc.b, group_map[oldc.b.group])
         add_contraction!(tn1, IndexContraction(a, b))
@@ -330,7 +393,7 @@ function matchcombine!(tn1::TensorNetwork, tn2::TensorNetwork)
     # find all matching indices that are not yet contracted
     matching = Vector{IndexLabel}()
     for idx in get_indices(tn1)
-        if haskey(tn1._contraction_with_index, idx)
+        if has_contraction(tn1, idx)
             continue
         end
         if has_index(tn2, idx)

@@ -1,9 +1,9 @@
-using FibTN.TensorNetworks
-using FibTN.TensorNetworks.TOBackend
+using FibErrThresh.TensorNetworks
+using FibErrThresh.TensorNetworks.TOBackend
 
 using SparseArrayKit, TensorOperations
 
-import FibTN.TensorNetworks: tensor_ports, tensor_data
+import FibErrThresh.TensorNetworks: tensor_ports, tensor_data
 abstract type DummyTensorType <: TensorType end
 struct DummyTensorType2 <: TensorType end
 tensor_data(::Type{DummyTensorType}) = [1, 2, 3]
@@ -93,6 +93,41 @@ end
     @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, j]))
     # must provide valid indices
     @test_throws ArgumentError execute_step!(es, PermuteIndicesStep(1, [i, j, IndexLabel(2, :a)]))
+end
+
+@testset "ExecutionState OuterProductStep" begin
+    tn = TensorNetwork()
+    i = IndexLabel(1, :i)
+    j = IndexLabel(2, :j)
+
+    tlA = TensorLabel(1, [i])
+    tlB = TensorLabel(2, [j])
+
+    tn = TensorNetwork()
+    add_tensor!(tn, tlA)
+    add_tensor!(tn, tlB)
+
+    A = [1.0, 2.0]
+    B = [3.0, 4.0]
+
+    es = ExecutionState(tn, Dict(1 => A, 2 => B))
+
+    # execute outer product
+    @test length(get_ids(es)) == 2
+    @test es._next_id == 3
+    execute_step!(es, OuterProductStep(i, j))
+    @test length(get_ids(es)) == 1
+    @test es._next_id == 4
+
+    # check result
+    et = es.tensor_from_id[only(get_ids(es))]
+    @test et.id == 3
+    @test et.groups == Set([1, 2])
+    @test et.indices == [i, j]
+
+    # check calculation via @tensor
+    @tensor C[a, b] := A[a] * B[b]
+    @test Array(et.data) ≈ C
 end
 
 @testset "ExecutionState ContractionStep I" begin

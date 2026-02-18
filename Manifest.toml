@@ -2,7 +2,7 @@
 
 julia_version = "1.12.2"
 manifest_format = "2.0"
-project_hash = "3d40ddcf36a2fc62393b9ff4e019183be595dd71"
+project_hash = "b057d1552877d03352cb84eb97797322bb71b617"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -504,7 +504,7 @@ uuid = "f5851436-0d7a-5f13-b9de-f02708fd171a"
 version = "3.3.11+0"
 
 [[deps.FibTN]]
-deps = ["Debugger", "GeometryBasics", "ITensorBase", "ITensors", "Makie", "ReTest", "Revise", "SparseArrayKit", "SparseArraysBase", "TensorKitSectors", "TensorOperations", "Test"]
+deps = ["Debugger", "GeometryBasics", "ITensorBase", "ITensors", "Makie", "ReTest", "Revise", "Serialization", "SparseArrayKit", "SparseArraysBase", "TensorKitSectors", "TensorOperations", "Test"]
 path = "."
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"

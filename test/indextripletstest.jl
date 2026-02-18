@@ -1,14 +1,14 @@
-using FibTN.IndexTriplets
+using FibErrThresh.IndexTriplets
 
-@testset "combine_indices basics" begin
-    @test combine_indices(0, 0, 0) == 1
-    @test combine_indices(0, 1, 1) == 2
-    @test combine_indices(1, 0, 1) == 3
-    @test combine_indices(1, 1, 0) == 4
-    @test combine_indices(1, 1, 1) == 5
-    @test combine_indices(1, 0, 0) == 6
-    @test combine_indices(0, 1, 0) == 7
-    @test combine_indices(0, 0, 1) == 8
+@testset "combine_qubits basics" begin
+    @test combine_qubits(0, 0, 0) == 1
+    @test combine_qubits(0, 1, 1) == 2
+    @test combine_qubits(1, 0, 1) == 3
+    @test combine_qubits(1, 1, 0) == 4
+    @test combine_qubits(1, 1, 1) == 5
+    @test combine_qubits(1, 0, 0) == 6
+    @test combine_qubits(0, 1, 0) == 7
+    @test combine_qubits(0, 0, 1) == 8
 end
 
 @testset "split_index basics" begin
@@ -25,7 +25,7 @@ end
 @testset "split and combine roundtrip" begin
     for a in 1:8
         i, j, k = split_index(a)
-        @test combine_indices(i, j, k) == a
+        @test combine_qubits(i, j, k) == a
     end
 end
 
@@ -34,10 +34,10 @@ end
     for a in 1:8
         i, j, k = split_index(a)
         @test permute_index_mapping(a, (1, 2, 3)) == a
-        @test permute_index_mapping(a, (1, 3, 2)) == combine_indices(i, k, j)
-        @test permute_index_mapping(a, (2, 3, 1)) == combine_indices(j, k, i)
-        @test permute_index_mapping(a, (2, 1, 3)) == combine_indices(j, i, k)
-        @test permute_index_mapping(a, (3, 2, 1)) == combine_indices(k, j, i)
-        @test permute_index_mapping(a, (3, 1, 2)) == combine_indices(k, i, j)
+        @test permute_index_mapping(a, (1, 3, 2)) == combine_qubits(i, k, j)
+        @test permute_index_mapping(a, (2, 3, 1)) == combine_qubits(j, k, i)
+        @test permute_index_mapping(a, (2, 1, 3)) == combine_qubits(j, i, k)
+        @test permute_index_mapping(a, (3, 2, 1)) == combine_qubits(k, j, i)
+        @test permute_index_mapping(a, (3, 1, 2)) == combine_qubits(k, i, j)
     end
 end
