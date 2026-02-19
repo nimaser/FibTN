@@ -123,7 +123,7 @@ function _generate_tensor_data(::Type{ELBOW_T2})
         μ, x, ν = split_index(V1)
         ν2, x2, μ2 = split_index(V3)
         if μ != μ2 || ν != ν2 || x != x2 continue end
-        P = combine_indices(x, 0, x2)
+        P = combine_qubits(x, 0, x2)
         arr[V1, V3, P] = 1
     end
     arr
@@ -151,7 +151,7 @@ function _generate_tensor_data(::Type{VERTEX})
         # abort inconsistent cases, leaving them 0
         if μ != μ2 || ν != ν2 || λ != λ2 continue end
         # get p and ensure this combination is fusion-valid
-        P = combine_indices(i, j, k)
+        P = combine_qubits(i, j, k)
         P <= 5 || continue
         # convert integers to anyons, and calculate the entry
         i, j, k, λ, μ, ν = anyon.([i, j, k, λ, μ, ν])
@@ -199,7 +199,7 @@ function _generate_tensor_data(::Type{STRINGEND})
             ν2, x, αprime2 = split_index(U)
             if αprime != αprime2 || μ != μ2 || ν != ν2 continue end
             if k != kprime || α != αprime continue end
-            P = combine_indices(x, l, y)
+            P = combine_qubits(x, l, y)
             α, β, k, l, x, y, μ, ν = anyon.([α, β, k, l, x, y, μ, ν])
             arr[α, β, k, l, D, S, U, P] = √√(qdim(k) * qdim(x) * qdim(y)) * √qdim(β) *
                 Gsymbol(μ, β, α, ν, x, k) * Gsymbol(α, y, x, β, μ, l) / √qdim(α)

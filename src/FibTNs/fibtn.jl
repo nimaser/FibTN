@@ -149,21 +149,21 @@ function create_ql(w::Int, h::Int, segments::Dict{GridPosition, Segment})
         segment = segments[i, j]
         stt = get_segmenttensortype(segment)
         if hasTVL(stt)
-            tqubits = [segment.qubits[:U], segment.qubits[:R], segment.qubits[:UM]]
-            mqubits = [segment.qubits[:UM], segment.qubits[:T], segment.qubits[:DM]]
-            bqubits = [segment.qubits[:D], segment.qubits[:L], segment.qubits[:DM]]
+            tqubits = (segment.qubits[:U], segment.qubits[:R], segment.qubits[:UM])
+            mqubits = (segment.qubits[:UM], segment.qubits[:T], segment.qubits[:DM])
+            bqubits = (segment.qubits[:D], segment.qubits[:L], segment.qubits[:DM])
             add_index!(ql, IL(segment.group, :tp), tqubits)
             add_index!(ql, IL(segment.group, :mp), mqubits)
             add_index!(ql, IL(segment.group, :bp), bqubits)
         elseif stt == BELBOW
-            bqubits = [segment.qubits[:D], segment.qubits[:L], segment.qubits[:M]]
+            bqubits = (segment.qubits[:D], segment.qubits[:L], segment.qubits[:M])
             add_index!(ql, IL(segment.group, :bp), bqubits)
         elseif stt == TELBOW
-            tqubits = [segment.qubits[:U], segment.qubits[:R], segment.qubits[:M]]
+            tqubits = (segment.qubits[:U], segment.qubits[:R], segment.qubits[:M])
             add_index!(ql, IL(segment.group, :tp), tqubits)
         else
-            tqubits = [segment.qubits[:U], segment.qubits[:R], segment.qubits[:M]]
-            bqubits = [segment.qubits[:D], segment.qubits[:L], segment.qubits[:M]]
+            tqubits = (segment.qubits[:U], segment.qubits[:R], segment.qubits[:M])
+            bqubits = (segment.qubits[:D], segment.qubits[:L], segment.qubits[:M])
             add_index!(ql, IL(segment.group, :tp), tqubits)
             add_index!(ql, IL(segment.group, :bp), bqubits)
         end
