@@ -1,9 +1,9 @@
-using FibTN.TensorNetworks
-using FibTN.TensorNetworks.TOBackend
+using FibErrThresh.TensorNetworks
+using FibErrThresh.TensorNetworks.TOBackend
 
 using SparseArrayKit, TensorOperations
 
-import FibTN.TensorNetworks: tensor_ports, tensor_data
+import FibErrThresh.TensorNetworks: tensor_ports, tensor_data
 abstract type DummyTensorType <: TensorType end
 struct DummyTensorType2 <: TensorType end
 tensor_data(::Type{DummyTensorType}) = [1, 2, 3]

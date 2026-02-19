@@ -1,4 +1,4 @@
-module FibTN
+module FibErrThresh
 
 # this function has methods added to it in ext/GLMakieVisualizationExt.jl
 export visualize
@@ -12,7 +12,7 @@ include("QubitLattices/QubitLattices.jl")
 include("TensorTypes/fibtensortypes.jl")
 include("TensorTypes/segmenttensortypes.jl")
 
-include("SegmentGrids/SegmentGrids.jl")
+include("FibTNs/FibTNs.jl")
 
 
-end # module FibTN
+end # module FibErrThresh

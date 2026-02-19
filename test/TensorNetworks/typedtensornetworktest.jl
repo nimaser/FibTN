@@ -1,6 +1,6 @@
-using FibTN.TensorNetworks
+using FibErrThresh.TensorNetworks
 
-import FibTN.TensorNetworks: tensor_ports, tensor_data
+import FibErrThresh.TensorNetworks: tensor_ports, tensor_data
 abstract type DummyTensorType <: TensorType end
 struct DummyTensorType2 <: TensorType end
 struct DummyTensorType3 <: TensorType end

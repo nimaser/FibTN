@@ -1,4 +1,4 @@
-name = "FibTN"
+name = "FibErrThresh"
 uuid = "d86cad82-91eb-4197-bec2-636ed0e5e4d0"
 version = "0.1.0"
 authors = ["nmaserang <nmaserang@berkeley.edu>"]

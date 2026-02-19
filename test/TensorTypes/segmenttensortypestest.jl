@@ -1,4 +1,4 @@
-using FibTN.SegmentTensorTypes
+using FibErrThresh.SegmentTensorTypes
 
 @testset "SegmentTensorTypes basics" begin
     # verify that port and tensor data are returned without errors

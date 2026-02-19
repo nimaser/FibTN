@@ -1,5 +1,5 @@
-using FibTN.QubitLattices
-using FibTN.TensorNetworks
+using FibErrThresh.QubitLattices
+using FibErrThresh.TensorNetworks
 
 using GLMakie, GeometryBasics
 
@@ -23,7 +23,7 @@ All unpaired qubits are displayed as tails of length `tail_length`.
 Custom display properties for qubit values 0 and 1 should be provided via
 the `qubitdisplayspec` parameter.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ax::Axis,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
@@ -73,7 +73,7 @@ Returns a Makie `Figure` and array of axes.
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     states::Vector{Dict{Int, Int}},
@@ -165,7 +165,7 @@ Returns a Makie `Figure` and `Axis`.
 
 Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
 """
-function FibTN.visualize(
+function FibErrThresh.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     inds::Vector{IndexLabel},

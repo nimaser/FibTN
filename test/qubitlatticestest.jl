@@ -1,6 +1,6 @@
-using FibTN.TensorNetworks
-using FibTN.IndexTriplets
-using FibTN.QubitLattices
+using FibErrThresh.TensorNetworks
+using FibErrThresh.IndexTriplets
+using FibErrThresh.QubitLattices
 
 @testset "QubitLattice construction" begin
     ql = QubitLattice()

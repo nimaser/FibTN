@@ -1,6 +1,6 @@
 module GLMakieVisualizationExt
 
-using FibTN
+using FibErrThresh
 using GLMakie
 
 include("../src/TensorNetworks/visualizer.jl")

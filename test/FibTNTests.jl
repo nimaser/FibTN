@@ -1,7 +1,7 @@
 module FibTNTests
 
 using ReTest
-using FibTN
+using FibErrThresh
 
 include("TensorNetworks/tensornetworktest.jl")
 include("TensorNetworks/typedtensornetworktest.jl")

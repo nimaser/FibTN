@@ -1,4 +1,4 @@
-using FibTN.IndexTriplets
+using FibErrThresh.IndexTriplets
 
 @testset "combine_indices basics" begin
     @test combine_indices(0, 0, 0) == 1

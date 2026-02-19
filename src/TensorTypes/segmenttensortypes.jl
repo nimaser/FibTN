@@ -4,7 +4,7 @@ using ..FibTensorTypes
 using ..TensorNetworks
 import ..TensorNetworks: tensor_ports, tensor_data, tensor_color, tensor_marker
 using ..TensorNetworks.TOBackend
-import FibTN: visualize
+import FibErrThresh: visualize
 
 using GeometryBasics
 

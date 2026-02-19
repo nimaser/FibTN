@@ -1,4 +1,4 @@
-using FibTN.TensorNetworks
+using FibErrThresh.TensorNetworks
 
 @testset "IndexLabel basics" begin
     # IndexLabel construction

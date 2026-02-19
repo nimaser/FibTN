@@ -1,4 +1,4 @@
-using FibTN.FibTensorTypes
+using FibErrThresh.FibTensorTypes
 
 @testset "FibTensorTypes basics" begin
     # verify that port and tensor data are returned without errors
