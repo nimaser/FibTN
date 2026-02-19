@@ -14,7 +14,7 @@ export STRINGEND, EXCITATION, DOUBLEDFUSION
 ### UTILS ###
 
 const ϕ = (1 + √5) / 2
-const D = √(1 + Φ^2)
+const D = √(1 + ϕ^2)
 const qdim = TensorKitSectors.dim
 anyon(a::Int) = a == 0 ? FibonacciAnyon(:I) : a == 1 ? FibonacciAnyon(:τ) : error("a must be 0 or 1")
 

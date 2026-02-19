@@ -1,7 +1,6 @@
 using FibTN.TensorNetworks
 using FibTN.IndexTriplets
 using FibTN.QubitLattices
-using Graphs
 
 @testset "QubitLattice construction" begin
     ql = QubitLattice()
