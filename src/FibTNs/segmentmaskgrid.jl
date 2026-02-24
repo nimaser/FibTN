@@ -1,7 +1,7 @@
 export smgprint
 export inferdirections!, fixmiddles!, segmentmaskgrid
 export remove_segment_connection!, add_segment_connection!, remove_boundary_crossings!
-export remove_segment!, replace_segment!
+export remove_segment!, remove_segments!, replace_segment!
 export add_right_boundaries!
 
 smgprint(segmentmaskgrid::BoundaryConditionsDict{Periodic, Unsigned}) where {Periodic} =
@@ -208,19 +208,18 @@ function remove_segment!(segmentmaskgrid::BoundaryConditionsDict{Periodic, Unsig
     # check bounds
     ingrid(segmentmaskgrid, x, y) ||
         throw(BoundsError("pos1=$pos1 not in grid"))
-    m = segmentmaskgrid[x, y]
     # strip the corresponding inward port from each neighbour that exists
-    if hasR(m) && haskey(segmentmaskgrid, x+1, y)
-        segmentmaskgrid[x+1, y] = m & ~STT_L
+    if haskey(segmentmaskgrid, x+1, y)
+        segmentmaskgrid[x+1, y] = segmentmaskgrid[x+1, y] & ~STT_L
     end
-    if hasL(m) && haskey(segmentmaskgrid, x-1, y)
-        segmentmaskgrid[x-1, y] = m & ~STT_R
+    if haskey(segmentmaskgrid, x-1, y)
+        segmentmaskgrid[x-1, y] = segmentmaskgrid[x-1, y] & ~STT_R
     end
-    if hasU(m) && haskey(segmentmaskgrid, x, y+1)
-        segmentmaskgrid[x, y+1] = m & ~STT_D
+    if haskey(segmentmaskgrid, x, y+1)
+        segmentmaskgrid[x, y+1] = segmentmaskgrid[x, y+1] & ~STT_D
     end
-    if hasD(m) && haskey(segmentmaskgrid, x, y-1)
-        segmentmaskgrid[x, y-1] = m & ~STT_U
+    if haskey(segmentmaskgrid, x, y-1)
+        segmentmaskgrid[x, y-1] = segmentmaskgrid[x, y-1] & ~STT_U
     end
     # delete the mask value
     delete!(segmentmaskgrid, x, y)
@@ -229,6 +228,9 @@ end
 
 remove_segment!(segmentmaskgrid::BoundaryConditionsDict{Periodic, Unsigned}, pos::GridPosition) where {Periodic} =
     remove_segment!(segmentmaskgrid, pos...)
+
+remove_segments!(segmentmaskgrid::BoundaryConditionsDict{Periodic, Unsigned}, positions::Vector{GridPosition}) where {Periodic} =
+    for pos in positions remove_segment!(segmentmaskgrid, pos) end; nothing
 
 """
 Replace only the middle flags (`STT_M`, `STT_T`, `STT_E`, `STT_V`) of the segment

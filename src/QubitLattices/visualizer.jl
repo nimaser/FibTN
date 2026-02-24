@@ -2,6 +2,7 @@ using FibErrThresh.QubitLattices
 using FibErrThresh.TensorNetworks
 
 using GLMakie, GeometryBasics
+using Printf
 
 export visualize
 
@@ -118,18 +119,20 @@ end
 
 
 """
-Plots `states` and corresponding `amps` onto a figure with a scrollable set of 'panes',
-each of which can contain at most `maxstatesperpane` states. Left and right arrow keys
+Plots `states` and corresponding `amps` into `gl` (a `GridLayout`) as a scrollable set
+of panes, each containing at most `maxstatesperpane` states. Left and right arrow keys
 can be used to change between panes.
 
 Each axis slot is plotted once; pane switching updates qubit colors via observables
 without replotting, so axis limits and layout remain fixed.
 
-Returns a Makie `Figure` and array of axes.
+The axes occupy `gl[1:h, 1:w]`; a label is placed at `gl[0, :]` and a slider at
+`gl[h+1, :]`. Returns `(axs, h, w)` so callers know the row/col extents used.
 
 Forwards `qubitdisplayspec` and `tail_vector` to `visualize`.
 """
 function FibErrThresh.visualize(
+    gl::GridLayout,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     states::Vector{Dict{Int, Int}},
@@ -148,22 +151,20 @@ function FibErrThresh.visualize(
     # the same amount, then calculate the width and height
     # of each pane
     statesperpane = Int(ceil(length(states) / numpanes))
-    # w*h could be larger than stateperpane, so to make
+    # w*h could be larger than statesperpane, so to make
     # sure all panes are fully filled we do
     w, h = _calculategridsidelengths(statesperpane)
     # and finally we update numpanes
     statesperpane = w * h
     numpanes = Int(ceil(length(states) / statesperpane))
 
-    # create the figure and axes
-    f = Figure()
-    axs = [Axis(f[r, c]; aspect=DataAspect()) for r in 1:h, c in 1:w]
+    axs = [Axis(gl[r, c]; aspect=DataAspect()) for r in 1:h, c in 1:w]
     for ax in axs ax.titlesize = 32 end
     linkaxes!(axs...)
 
     # compute normalization factor and add to title
     N = sqrt(sum(abs2.(amps)))
-    f[0, :] = Label(f, L"N = %$N", fontsize=24, tellwidth=false)
+    Label(gl[0, :], L"N = %$N", fontsize=24, tellwidth=false)
 
     # plot the QL once per axis; store observable (for state updates) and plot (for visibility)
     slot_obs = Vector{Observable}(undef, length(axs))
@@ -179,7 +180,7 @@ function FibErrThresh.visualize(
     get_pane_amps(pane::Int) = amps[(pane-1)*statesperpane+1:min(pane*statesperpane, length(amps))]
 
     # set up slider
-    sg = SliderGrid(f[h+1, :],
+    sg = SliderGrid(gl[h+1, :],
         (label="Pane #", range=1:numpanes, startvalue=1, update_while_dragging=false))
     sl = sg.sliders[1]
     on(sl.value) do v
@@ -187,7 +188,7 @@ function FibErrThresh.visualize(
         pane_amps = get_pane_amps(v)
         for i in eachindex(axs)
             if i <= length(pane_states)
-                axs[i].title = "$(pane_amps[i])"
+                axs[i].title = _format_amp(pane_amps[i])
                 slot_obs[i][] = pane_states[i]
                 slot_plots[i].visible = true
             else
@@ -209,6 +210,34 @@ function FibErrThresh.visualize(
         hidespines!(ax)
         hidedecorations!(ax)
     end
+    axs, h, w
+end
+
+"""
+Plots `states` and corresponding `amps` onto a figure with a scrollable set of 'panes',
+each of which can contain at most `maxstatesperpane` states. Left and right arrow keys
+can be used to change between panes.
+
+Each axis slot is plotted once; pane switching updates qubit colors via observables
+without replotting, so axis limits and layout remain fixed.
+
+Returns a Makie `Figure` and array of axes.
+
+Forwards `qubitdisplayspec` and `tail_vector` to `visualize`.
+"""
+function FibErrThresh.visualize(
+    ql::QubitLattice,
+    position_from_index::Dict{IndexLabel, Point2f},
+    states::Vector{Dict{Int, Int}},
+    amps::Vector{<:Number};
+    maxstatesperpane::Int=3,
+    qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
+    tail_vector::Point2f=Point2f(0.5, 0),
+)
+    f = Figure()
+    axs, _, _ = visualize(f.layout, ql, position_from_index, states, amps;
+        maxstatesperpane=maxstatesperpane,
+        qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
     add_inspector_lazily!(f)
     resize_to_layout!(f)
     f, axs
@@ -245,7 +274,7 @@ function FibErrThresh.visualize(
     # plot all-zero state; get observable and qubit ordering
     qubitvals_obs, qubits, segmentsresult = visualize(ax, ql, position_from_index;
         qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
-    ax.title = "$(get_amp(qubitvals_obs[]))"
+    ax.title = _format_amp(get_amp(qubitvals_obs[]))
     # left-click toggles qubits; deregister default rectanglezoom first
     deregister_interaction!(ax, :rectanglezoom)
     toggled = Set{Int}()
@@ -264,7 +293,7 @@ function FibErrThresh.visualize(
         # toggle qubit in-place in the observable's dict, then notify
         qubitvals_obs[][q] = 1 - qubitvals_obs[][q]
         push!(toggled, q)
-        ax.title = "$(get_amp(qubitvals_obs[]))"
+        ax.title = _format_amp(get_amp(qubitvals_obs[]))
         notify(qubitvals_obs)
     end
     nothing
@@ -297,6 +326,25 @@ function FibErrThresh.visualize(
 end
 
 ### UTILS ###
+
+"""
+Formats a real or complex amplitude to fit within 10 characters.
+
+For real values: uses `@sprintf("%.6g", x)` which gives up to 6 significant
+figures in the shortest form, then truncates to 10.
+For complex values: formats real and imaginary parts as `±Yi` using 3 significant
+figures each to stay within budget (e.g. `0.123+0.456i`), then truncates to 10.
+"""
+function _format_amp(x::Number)
+    s = if iszero(imag(x))
+        @sprintf("%.9g", real(x))
+    else
+        r, im = real(x), imag(x)
+        sign = im >= 0 ? "+" : "-"
+        @sprintf("%.4g%s%.4gi", r, sign, abs(im))
+    end
+    first(s, 15)
+end
 
 """
 Computes the width and height of a rectangle whose area is

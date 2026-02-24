@@ -515,41 +515,92 @@ end
 # ### SEMANTIC CONTRACTION HELPERS ###
 
 """
-Insert a reflector (and optionally a BOUNDARY tensor) between two already-added
-tensor groups, connecting `from_port` of `from_group` to `to_port` of `to_group`
-through the chain. The chain is:
+Insert a single REFLECTOR between `from_group:from_port` and `to_group:to_port`,
+positioning it at the midpoint of the two tensor positions.
 
-  from_group:from_port → R1:V1, R1:V2 → [B:V1, B:V2 → R2:V1, R2:V2 →] to_group:to_port
+  from_group:from_port → R:V1, R:V2 → to_group:to_port
 
-When `with_vl=true`, BOUNDARY:V1 faces `from_group` (the first argument).
-Returns nothing; tensors are added to `ftn.ttn` in-place.
+Returns the allocated group ID of the new REFLECTOR.
 """
 function _add_reflected_contraction!(ftn::FibTN,
         from_group::Int, from_port::Symbol,
-        to_group::Int, to_port::Symbol;
-        with_vl::Bool=false)
-    r1 = _allocate_group!(ftn)
-    add_tensor!(ftn.ttn, r1, REFLECTOR)
-    add_contraction!(ftn.ttn.tn, IC(IL(from_group, from_port), IL(r1, :V1)))
-    if with_vl
-        b  = _allocate_group!(ftn)
-        r2 = _allocate_group!(ftn)
-        add_tensor!(ftn.ttn, b,  VACUUMLOOP)
-        add_tensor!(ftn.ttn, r2, REFLECTOR)
-        add_contraction!(ftn.ttn.tn, IC(IL(r1, :V2), IL(b,  :V1)))
-        add_contraction!(ftn.ttn.tn, IC(IL(b,  :V2), IL(r2, :V1)))
-        add_contraction!(ftn.ttn.tn, IC(IL(r2, :V2), IL(to_group, to_port)))
-    else
-        add_contraction!(ftn.ttn.tn, IC(IL(r1, :V2), IL(to_group, to_port)))
-    end
-    # place new tensors evenly along the line from from_group to to_group
+        to_group::Int, to_port::Symbol)
+    r = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, r, REFLECTOR)
+    add_contraction!(ftn.ttn.tn, IC(IL(from_group, from_port), IL(r, :V1)))
+    add_contraction!(ftn.ttn.tn, IC(IL(r, :V2), IL(to_group, to_port)))
+    ftn.tpos[r] = (ftn.tpos[from_group] + ftn.tpos[to_group]) / 2
+    return r
+end
+
+"""
+Insert a VACUUMLOOP flanked by two REFLECTORs between `from_group:from_port` and
+`to_group:to_port`. The chain is:
+
+  from_group:from_port → R1:V1, R1:V2 → B:V1, B:V2 → R2:V1, R2:V2 → to_group:to_port
+
+`B:V1` faces `from_group`. The middle tensor is placed at the midpoint; the two
+flanking reflectors are each placed at the midpoint between their neighbours.
+Returns nothing.
+"""
+function _add_vl_contraction!(ftn::FibTN,
+        from_group::Int, from_port::Symbol,
+        to_group::Int, to_port::Symbol)
+    b = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, b, VACUUMLOOP)
+    ftn.tpos[b] = (ftn.tpos[from_group] + ftn.tpos[to_group]) / 2
+    _add_reflected_contraction!(ftn, from_group, from_port, b, :V1)
+    _add_reflected_contraction!(ftn, b, :V2, to_group, to_port)
+    nothing
+end
+
+"""
+Insert a `STRINGCONTROL{S}` flanked by two REFLECTORs between `from_group:from_port`
+and `to_group:to_port`. The chain is:
+
+  from_group:from_port → R1:V1, R1:V2 → SC:V1, SC:V2 → R2:V1, R2:V2 → to_group:to_port
+
+`SC:V1` faces `from_group`. The middle tensor is placed at the midpoint; the two
+flanking reflectors are each placed at the midpoint between their neighbours.
+Returns nothing.
+"""
+function _add_sc_contraction!(ftn::FibTN,
+        from_group::Int, from_port::Symbol,
+        to_group::Int, to_port::Symbol,
+        s::Int)
+    sc = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, sc, STRINGCONTROL{s})
+    ftn.tpos[sc] = (ftn.tpos[from_group] + ftn.tpos[to_group]) / 2
+    _add_reflected_contraction!(ftn, from_group, from_port, sc, :V1)
+    _add_reflected_contraction!(ftn, sc, :V2, to_group, to_port)
+    nothing
+end
+
+"""
+Insert a VACUUMLOOP followed by a `STRINGCONTROL{S}`, each flanked by REFLECTORs,
+between `from_group:from_port` and `to_group:to_port`. The chain is:
+
+  from_group:from_port → R1 → B:V1, B:V2 → R2 → SC:V1, SC:V2 → R3 → to_group:to_port
+
+`B:V1` faces `from_group`. Middle tensors are placed at 1/3 and 2/3 of the straight
+line between the two endpoint positions; reflectors land at the midpoints between
+their neighbours. Returns nothing.
+"""
+function _add_vl_sc_contraction!(ftn::FibTN,
+        from_group::Int, from_port::Symbol,
+        to_group::Int, to_port::Symbol,
+        s::Int)
     p1 = ftn.tpos[from_group]
     p2 = ftn.tpos[to_group]
-    new_groups = with_vl ? [r1, b, r2] : [r1]
-    n = length(new_groups)
-    for (k, g) in enumerate(new_groups)
-        ftn.tpos[g] = p1 + k / (n + 1) * (p2 - p1)
-    end
+    b  = _allocate_group!(ftn)
+    sc = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, b,  VACUUMLOOP)
+    add_tensor!(ftn.ttn, sc, STRINGCONTROL{s})
+    ftn.tpos[b]  = p1 + 1/3 * (p2 - p1)
+    ftn.tpos[sc] = p1 + 2/3 * (p2 - p1)
+    _add_reflected_contraction!(ftn, from_group, from_port, b,  :V1)
+    _add_reflected_contraction!(ftn, b,  :V2, sc, :V1)
+    _add_reflected_contraction!(ftn, sc, :V2, to_group, to_port)
     nothing
 end
 
@@ -566,10 +617,11 @@ function add_contraction!(ftn::FibTN,
         with_vl::Bool=false)
     cg = ftn.edge_crossings[edge][crossing_idx]
     fg = ftn.fusions[plaq][fusion_idx]
-    # crossing:crossing_port → R → [B →] fusion:fusion_port
-    # B:V1 faces the crossing (from_group side)
-    _add_reflected_contraction!(ftn, cg, crossing_port, fg, fusion_port;
-                                with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, cg, crossing_port, fg, fusion_port)
+    else
+        _add_reflected_contraction!(ftn, cg, crossing_port, fg, fusion_port)
+    end
 end
 
 """
@@ -585,10 +637,11 @@ function add_contraction!(ftn::FibTN,
         with_vl::Bool=false)
     fg = ftn.fusions[plaq][fusion_idx]
     cg = ftn.edge_crossings[edge][crossing_idx]
-    # fusion:fusion_port → R → [B →] crossing:crossing_port
-    # B:V1 faces the fusion (from_group side)
-    _add_reflected_contraction!(ftn, fg, fusion_port, cg, crossing_port;
-                                with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, fg, fusion_port, cg, crossing_port)
+    else
+        _add_reflected_contraction!(ftn, fg, fusion_port, cg, crossing_port)
+    end
 end
 
 """
@@ -603,7 +656,11 @@ function add_contraction!(ftn::FibTN, pos::GridPosition,
         with_vl::Bool=false)
     sg = ftn.segments[pos].group
     fg = ftn.fusions[pos][fusion_idx]
-    _add_reflected_contraction!(ftn, sg, :S, fg, fusion_port; with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, sg, :S, fg, fusion_port)
+    else
+        _add_reflected_contraction!(ftn, sg, :S, fg, fusion_port)
+    end
 end
 
 """
@@ -619,7 +676,11 @@ function add_contraction!(ftn::FibTN,
         with_vl::Bool=false)
     fg = ftn.fusions[pos][fusion_idx]
     sg = ftn.segments[pos].group
-    _add_reflected_contraction!(ftn, fg, fusion_port, sg, :S; with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, fg, fusion_port, sg, :S)
+    else
+        _add_reflected_contraction!(ftn, fg, fusion_port, sg, :S)
+    end
 end
 
 """
@@ -634,9 +695,11 @@ function add_contraction!(ftn::FibTN, pos::GridPosition,
         with_vl::Bool=false)
     sg = ftn.segments[pos].group
     cg = ftn.edge_crossings[edge][crossing_idx]
-    # segment:S → R → [B →] crossing:crossing_port
-    # B:V1 faces the segment (from_group side)
-    _add_reflected_contraction!(ftn, sg, :S, cg, crossing_port; with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, sg, :S, cg, crossing_port)
+    else
+        _add_reflected_contraction!(ftn, sg, :S, cg, crossing_port)
+    end
 end
 
 """
@@ -652,9 +715,11 @@ function add_contraction!(ftn::FibTN,
         with_vl::Bool=false)
     cg = ftn.edge_crossings[edge][crossing_idx]
     sg = ftn.segments[pos].group
-    # crossing:crossing_port → R → [B →] segment:S
-    # B:V1 faces the crossing (from_group side)
-    _add_reflected_contraction!(ftn, cg, crossing_port, sg, :S; with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, cg, crossing_port, sg, :S)
+    else
+        _add_reflected_contraction!(ftn, cg, crossing_port, sg, :S)
+    end
 end
 
 """
@@ -668,43 +733,68 @@ function add_contraction!(ftn::FibTN, plaq::GridPosition,
         with_vl::Bool=false)
     fg1 = ftn.fusions[plaq][fusion_idx1]
     fg2 = ftn.fusions[plaq][fusion_idx2]
-    _add_reflected_contraction!(ftn, fg1, fusion_port1, fg2, fusion_port2;
-                                with_vl)
+    if with_vl
+        _add_vl_contraction!(ftn, fg1, fusion_port1, fg2, fusion_port2)
+    else
+        _add_reflected_contraction!(ftn, fg1, fusion_port1, fg2, fusion_port2)
+    end
 end
 
 """
-Contracts two crossing ports on the same edge `edge`, inserting a reflector
-between them. With `with_vl=true`, a BOUNDARY tensor is also inserted
-(its `:V1` faces `crossing_idx1`).
+Contracts two crossing ports, inserting a reflector chain between them.
+
+- Default: single REFLECTOR.
+- `with_vl=true`: REFLECTOR → VACUUMLOOP → REFLECTOR (`:V1` faces `crossing_idx1`).
+- `with_sc=true`: REFLECTOR → STRINGCONTROL{sc} → REFLECTOR (`:V1` faces `crossing_idx1`).
+- `with_vl=true, with_sc=true`: REFLECTOR → VACUUMLOOP → REFLECTOR → STRINGCONTROL{sc} → REFLECTOR.
 """
-function add_contraction!(ftn::FibTN, edge::GridEdge,
-        crossing_idx1::Int, crossing_port1::Symbol,
-        crossing_idx2::Int, crossing_port2::Symbol;
-        with_vl::Bool=false)
-    cg1 = ftn.edge_crossings[edge][crossing_idx1]
-    cg2 = ftn.edge_crossings[edge][crossing_idx2]
-    _add_reflected_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2;
-                                with_vl)
+function add_contraction!(ftn::FibTN,
+    edge1::GridEdge, crossing_idx1::Int, crossing_port1::Symbol,
+    edge2::GridEdge, crossing_idx2::Int, crossing_port2::Symbol;
+        with_vl::Bool=false, with_sc::Bool=false, sc::Int=0)
+    cg1 = ftn.edge_crossings[edge1][crossing_idx1]
+    cg2 = ftn.edge_crossings[edge2][crossing_idx2]
+    if with_vl && with_sc
+        _add_vl_sc_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2, sc)
+    elseif with_vl
+        _add_vl_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2)
+    elseif with_sc
+        _add_sc_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2, sc)
+    else
+        _add_reflected_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2)
+    end
 end
 
 """
 Fixes the excitation control indices of the segment at `pos` to the given values
 `a`, `b`, `l` (0-based qubit values). The segment must have the excitation bit set
 in its mask (i.e. `hasE(get_segmenttensortype(segment))`). Adds an
-`EXCITATION_CONTROL{a,b,l}` tensor contracted against the segment's `:a`, `:b`, `:l`
+`EXCITATIONCONTROL{a,b,l}` tensor contracted against the segment's `:a`, `:b`, `:l`
 ports. The control tensor is not assigned a position and will be skipped during
 visualization.
 """
-function fix_excitation!(ftn::FibTN, pos::GridPosition, a::Int, b::Int, l::Int)
+function fix_excitation!(ftn::FibTN, pos::GridPosition, a::Int, b::Int, l::Int; root::Bool=false)
+    # validate segment
     segment = ftn[pos]
     T = get_segmenttensortype(segment)
     hasE(T) || throw(ArgumentError("segment at $pos is not an excitation"))
-    g_ctrl = _allocate_group!(ftn)
-    add_tensor!(ftn.ttn, g_ctrl, EXCITATION_CONTROL{a,b,l})
+    # create control tensor
+    ctrl_g = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, ctrl_g, EXCITATIONCONTROL{a,b,l})
+    # add root if needed
     seg_g = segment.group
-    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :a), IL(g_ctrl, :a)))
-    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :b), IL(g_ctrl, :b)))
-    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :l), IL(g_ctrl, :l)))
+    base_g = seg_g # the tensor we contract control with
+    if root
+        root_g = _allocate_group!(ftn)
+        add_tensor!(ftn.ttn, root_g, FUSIONTREEROOT)
+        add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :a), IL(root_g, :a1)))
+        add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :b), IL(root_g, :b1)))
+        add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :l), IL(root_g, :l1)))
+        base_g = root_g
+    end
+    add_contraction!(ftn.ttn.tn, IC(IL(base_g, :a), IL(ctrl_g, :a)))
+    add_contraction!(ftn.ttn.tn, IC(IL(base_g, :b), IL(ctrl_g, :b)))
+    add_contraction!(ftn.ttn.tn, IC(IL(base_g, :l), IL(ctrl_g, :l)))
     nothing
 end
 

@@ -139,35 +139,40 @@ function FibErrThresh.visualize(ftn::FibTN, inds::Vector{IndexLabel}, data::Abst
 end
 
 """
-Plots `ftn` with a scrollable paned results view: the stacked qubit lattice and tensor
-network occupy the leftmost column (negative index), a thin vertical bar separates them
-from the paned qubit lattice (cols 1:w) on the right.
+Plots `ftn` with a scrollable paned results view: the figure is split into two equal
+halves — left (col 1) has the stacked qubit lattice and tensor network, right (col 3)
+has the paned qubit lattice showing multiple states.
 Forwards keyword arguments to the underlying `visualize` for the paned qubit lattice.
 Returns `(f, tax, qax, pane_axs)`.
 """
 function FibErrThresh.visualize(ftn::FibTN, states::Vector{Dict{Int,Int}},
         amps::Vector{<:Number}; kwargs...)
-    # build the paned QL view first — it creates the figure and occupies cols 1:w, rows 1:h
-    f, pane_axs = visualize(ftn.ql, ftn.ipos, states, amps; kwargs...)
-    h = size(pane_axs, 1)
-    # thin separator at col 0, stacked block at col -1 (both to the left of the paned view)
-    Box(f[1:h, 0]; color=:gray50, strokewidth=0)
-    colsize!(f.layout, 0, Fixed(2))
-    gl = GridLayout(f[1:h, -1])
-    qax = Axis(gl[1, 1]; aspect=DataAspect())
-    tax = Axis(gl[2, 1]; aspect=DataAspect())
+    f = Figure()
+    # left half: stacked ttn (top) + ql (bottom)
+    left_gl = GridLayout(f[1, 1])
+    qax = Axis(left_gl[1, 1]; aspect=DataAspect())
+    tax = Axis(left_gl[2, 1]; aspect=DataAspect())
     _wire_ftn_axes!(f, tax, qax, ftn)
+    # thin vertical separator
+    Box(f[1, 2]; color=:gray50, strokewidth=0)
+    colsize!(f.layout, 2, Fixed(2))
+    # right half: paned QL view
+    right_gl = GridLayout(f[1, 3])
+    pane_axs, _, _ = visualize(right_gl, ftn.ql, ftn.ipos, states, amps; kwargs...)
+    # equal halves: col 1 and col 3 each get half the width; col 2 is fixed at 2px
+    colsize!(f.layout, 1, Relative(0.5))
+    colsize!(f.layout, 3, Relative(0.5))
     resize_to_layout!(f)
     f, tax, qax, pane_axs
 end
 
 """
 Plots `ftn` with both an interactive results explorer and a paned results view. The
-figure is split vertically into two halves by a thin separator:
-- Right half: scrollable paned qubit lattice showing multiple states
-- Left half: a GridLayout split horizontally into two equal rows:
-  - Top: horizontal qubit lattice (left) and tensor network (right), hover-linked
+figure is split into two equal halves by a thin separator:
+- Left half (col 1): a GridLayout with two rows:
+  - Top: qubit lattice (left) and tensor network (right), hover-linked
   - Bottom: clickable qubit lattice showing the amplitude of the selected state
+- Right half (col 3): scrollable paned qubit lattice showing multiple states
 
 `inds` and `data` should come from contracting `ftn` (e.g. via `naive_contract`).
 `states` and `amps` are the states to display in the paned view.
@@ -177,23 +182,25 @@ Returns `(f, tax, qax, rax, pane_axs)`.
 function FibErrThresh.visualize(ftn::FibTN,
         inds::Vector{IndexLabel}, data::AbstractArray,
         states::Vector{Dict{Int,Int}}, amps::Vector{<:Number}; kwargs...)
-    # build the paned QL view first — it creates the figure and occupies cols 1:w, rows 1:h
-    f, pane_axs = visualize(ftn.ql, ftn.ipos, states, amps; kwargs...)
-    h = size(pane_axs, 1)
-    # thin vertical separator between right (paned) and left halves
-    Box(f[1:h, 0]; color=:gray50, strokewidth=0)
-    colsize!(f.layout, 0, Fixed(2))
-    # left half: a GridLayout with two equal rows
-    left_gl = GridLayout(f[1:h, -1])
-    # top row: horizontal qax (left) + tax (right), hover-linked
+    f = Figure()
+    # left half: top row has qax+tax hover-linked; bottom row has interactive amplitude explorer
+    left_gl = GridLayout(f[1, 1])
     qax = Axis(left_gl[1, 1]; aspect=DataAspect())
     tax = Axis(left_gl[1, 2]; aspect=DataAspect())
     _wire_ftn_axes!(f, tax, qax, ftn)
-    # bottom row: interactive amplitude explorer
     rax = Axis(left_gl[2, 1:2]; aspect=DataAspect())
     visualize(f, rax, ftn.ql, ftn.ipos, inds, data)
     hidespines!(rax)
     hidedecorations!(rax)
+    # thin vertical separator
+    Box(f[1, 2]; color=:gray50, strokewidth=0)
+    colsize!(f.layout, 2, Fixed(2))
+    # right half: paned QL view
+    right_gl = GridLayout(f[1, 3])
+    pane_axs, _, _ = visualize(right_gl, ftn.ql, ftn.ipos, states, amps; kwargs...)
+    # equal halves: col 1 and col 3 each get half the width; col 2 is fixed at 2px
+    colsize!(f.layout, 1, Relative(0.5))
+    colsize!(f.layout, 3, Relative(0.5))
     add_inspector_lazily!(f)
     resize_to_layout!(f)
     f, tax, qax, rax, pane_axs
