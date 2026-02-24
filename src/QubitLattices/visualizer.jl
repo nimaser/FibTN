@@ -133,7 +133,7 @@ function FibErrThresh.visualize(
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f},
     states::Vector{Dict{Int, Int}},
-    amps::Vector{<:Real};
+    amps::Vector{<:Number};
     maxstatesperpane::Int=3,
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
     tail_vector::Point2f=Point2f(0.5, 0),
@@ -162,8 +162,7 @@ function FibErrThresh.visualize(
     linkaxes!(axs...)
 
     # compute normalization factor and add to title
-    square(x) = x^2
-    N = sqrt(sum(square.(amps)))
+    N = sqrt(sum(abs2.(amps)))
     f[0, :] = Label(f, L"N = %$N", fontsize=24, tellwidth=false)
 
     # plot the QL once per axis; store observable (for state updates) and plot (for visibility)

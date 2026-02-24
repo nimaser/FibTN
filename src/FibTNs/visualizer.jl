@@ -33,9 +33,12 @@ function _visualize_ttn(tax::Axis, ftn::FibTN)
         elseif haskey(ftn.edgereflector_from_group, g)
             edge, k = ftn.edgereflector_from_group[g]
             "$(g)\nreflector $(k) on $(edge)"
-        else
+        elseif haskey(ftn.fusion_from_group, g)
             pos, k = ftn.fusion_from_group[g]
             "$(g)\nfusion $(k) at $(pos)"
+        else
+            T = ftn.ttn.tensortype_from_group[g]
+            "$(g)\n$(T)"
         end
     end
 
@@ -143,7 +146,7 @@ Forwards keyword arguments to the underlying `visualize` for the paned qubit lat
 Returns `(f, tax, qax, pane_axs)`.
 """
 function FibErrThresh.visualize(ftn::FibTN, states::Vector{Dict{Int,Int}},
-        amps::Vector{<:Real}; kwargs...)
+        amps::Vector{<:Number}; kwargs...)
     # build the paned QL view first — it creates the figure and occupies cols 1:w, rows 1:h
     f, pane_axs = visualize(ftn.ql, ftn.ipos, states, amps; kwargs...)
     h = size(pane_axs, 1)
@@ -173,7 +176,7 @@ Returns `(f, tax, qax, rax, pane_axs)`.
 """
 function FibErrThresh.visualize(ftn::FibTN,
         inds::Vector{IndexLabel}, data::AbstractArray,
-        states::Vector{Dict{Int,Int}}, amps::Vector{<:Real}; kwargs...)
+        states::Vector{Dict{Int,Int}}, amps::Vector{<:Number}; kwargs...)
     # build the paned QL view first — it creates the figure and occupies cols 1:w, rows 1:h
     f, pane_axs = visualize(ftn.ql, ftn.ipos, states, amps; kwargs...)
     h = size(pane_axs, 1)

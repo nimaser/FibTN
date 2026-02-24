@@ -16,7 +16,7 @@ Assumes TOBackend was used to compute the tensor, and so that `data` is a Sparse
 Returns corresponding lists of states and amps.
 """
 function get_states_and_amps(ql::QubitLattice, inds::Vector{IndexLabel}, data::SparseArray)
-    states, amps = Vector{Dict{Int, Int}}(), Vector{Real}()
+    states, amps = Vector{Dict{Int, Int}}(), Vector{Number}()
     for (cartesian_idxvals, amp) in nonzero_pairs(data)
         push!(states, idxvals2qubitvals(ql, inds, [Tuple(cartesian_idxvals)...]))
         push!(amps, amp)

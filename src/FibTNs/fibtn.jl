@@ -4,6 +4,7 @@ export masks2types
 export FibTN, isperiodic
 export add_crossings!, remove_crossing!, add_fusions!, remove_fusion!
 export add_contraction!
+export fix_excitation!
 
 using ..TensorNetworks.TOBackend
 export naive_contract
@@ -520,20 +521,20 @@ through the chain. The chain is:
 
   from_group:from_port → R1:V1, R1:V2 → [B:V1, B:V2 → R2:V1, R2:V2 →] to_group:to_port
 
-When `with_boundary=true`, BOUNDARY:V1 faces `from_group` (the first argument).
+When `with_vl=true`, BOUNDARY:V1 faces `from_group` (the first argument).
 Returns nothing; tensors are added to `ftn.ttn` in-place.
 """
 function _add_reflected_contraction!(ftn::FibTN,
         from_group::Int, from_port::Symbol,
         to_group::Int, to_port::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     r1 = _allocate_group!(ftn)
     add_tensor!(ftn.ttn, r1, REFLECTOR)
     add_contraction!(ftn.ttn.tn, IC(IL(from_group, from_port), IL(r1, :V1)))
-    if with_boundary
+    if with_vl
         b  = _allocate_group!(ftn)
         r2 = _allocate_group!(ftn)
-        add_tensor!(ftn.ttn, b,  BOUNDARY)
+        add_tensor!(ftn.ttn, b,  VACUUMLOOP)
         add_tensor!(ftn.ttn, r2, REFLECTOR)
         add_contraction!(ftn.ttn.tn, IC(IL(r1, :V2), IL(b,  :V1)))
         add_contraction!(ftn.ttn.tn, IC(IL(b,  :V2), IL(r2, :V1)))
@@ -541,12 +542,20 @@ function _add_reflected_contraction!(ftn::FibTN,
     else
         add_contraction!(ftn.ttn.tn, IC(IL(r1, :V2), IL(to_group, to_port)))
     end
+    # place new tensors evenly along the line from from_group to to_group
+    p1 = ftn.tpos[from_group]
+    p2 = ftn.tpos[to_group]
+    new_groups = with_vl ? [r1, b, r2] : [r1]
+    n = length(new_groups)
+    for (k, g) in enumerate(new_groups)
+        ftn.tpos[g] = p1 + k / (n + 1) * (p2 - p1)
+    end
     nothing
 end
 
 """
 Contracts a crossing port to a fusion port, inserting a reflector between them.
-With `with_boundary=true`, a BOUNDARY tensor is also inserted with its `:V1` facing
+With `with_vl=true`, a BOUNDARY tensor is also inserted with its `:V1` facing
 the crossing.
 
 No validation of port validity or plaquette membership is performed.
@@ -554,18 +563,18 @@ No validation of port validity or plaquette membership is performed.
 function add_contraction!(ftn::FibTN,
         edge::GridEdge, crossing_idx::Int, crossing_port::Symbol,
         plaq::GridPosition, fusion_idx::Int, fusion_port::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     cg = ftn.edge_crossings[edge][crossing_idx]
     fg = ftn.fusions[plaq][fusion_idx]
     # crossing:crossing_port → R → [B →] fusion:fusion_port
     # B:V1 faces the crossing (from_group side)
     _add_reflected_contraction!(ftn, cg, crossing_port, fg, fusion_port;
-                                with_boundary)
+                                with_vl)
 end
 
 """
 Contracts a fusion port to a crossing port, inserting a reflector between them.
-With `with_boundary=true`, a BOUNDARY tensor is also inserted with its `:V1` facing
+With `with_vl=true`, a BOUNDARY tensor is also inserted with its `:V1` facing
 the fusion.
 
 No validation of port validity or plaquette membership is performed.
@@ -573,33 +582,33 @@ No validation of port validity or plaquette membership is performed.
 function add_contraction!(ftn::FibTN,
         plaq::GridPosition, fusion_idx::Int, fusion_port::Symbol,
         edge::GridEdge, crossing_idx::Int, crossing_port::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     fg = ftn.fusions[plaq][fusion_idx]
     cg = ftn.edge_crossings[edge][crossing_idx]
     # fusion:fusion_port → R → [B →] crossing:crossing_port
     # B:V1 faces the fusion (from_group side)
     _add_reflected_contraction!(ftn, fg, fusion_port, cg, crossing_port;
-                                with_boundary)
+                                with_vl)
 end
 
 """
 Contracts the `:S` port of the segment at `pos` to a fusion port, inserting a
-reflector between them. With `with_boundary=true`, a BOUNDARY tensor is also
+reflector between them. With `with_vl=true`, a BOUNDARY tensor is also
 inserted with its `:V1` facing the segment.
 
 Only valid for segments with an excitation tensor (`:S` port present).
 """
 function add_contraction!(ftn::FibTN, pos::GridPosition,
         fusion_idx::Int, fusion_port::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     sg = ftn.segments[pos].group
     fg = ftn.fusions[pos][fusion_idx]
-    _add_reflected_contraction!(ftn, sg, :S, fg, fusion_port; with_boundary)
+    _add_reflected_contraction!(ftn, sg, :S, fg, fusion_port; with_vl)
 end
 
 """
 Contracts a fusion port to the `:S` port of the segment at `pos`, inserting a
-reflector between them. With `with_boundary=true`, a BOUNDARY tensor is also
+reflector between them. With `with_vl=true`, a BOUNDARY tensor is also
 inserted with its `:V1` facing the fusion.
 
 Only valid for segments with an excitation tensor (`:S` port present).
@@ -607,32 +616,32 @@ Only valid for segments with an excitation tensor (`:S` port present).
 function add_contraction!(ftn::FibTN,
         fusion_idx::Int, fusion_port::Symbol,
         pos::GridPosition;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     fg = ftn.fusions[pos][fusion_idx]
     sg = ftn.segments[pos].group
-    _add_reflected_contraction!(ftn, fg, fusion_port, sg, :S; with_boundary)
+    _add_reflected_contraction!(ftn, fg, fusion_port, sg, :S; with_vl)
 end
 
 """
 Contracts the `:S` port of the segment at `pos` to a crossing port, inserting
-a reflector between them. With `with_boundary=true`, a BOUNDARY tensor is also
+a reflector between them. With `with_vl=true`, a BOUNDARY tensor is also
 inserted with its `:V1` facing the segment.
 
 Only valid for segments with an excitation tensor (`:S` port present).
 """
 function add_contraction!(ftn::FibTN, pos::GridPosition,
         edge::GridEdge, crossing_idx::Int, crossing_port::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     sg = ftn.segments[pos].group
     cg = ftn.edge_crossings[edge][crossing_idx]
     # segment:S → R → [B →] crossing:crossing_port
     # B:V1 faces the segment (from_group side)
-    _add_reflected_contraction!(ftn, sg, :S, cg, crossing_port; with_boundary)
+    _add_reflected_contraction!(ftn, sg, :S, cg, crossing_port; with_vl)
 end
 
 """
 Contracts a crossing port to the `:S` port of the segment at `pos`, inserting
-a reflector between them. With `with_boundary=true`, a BOUNDARY tensor is also
+a reflector between them. With `with_vl=true`, a BOUNDARY tensor is also
 inserted with its `:V1` facing the crossing.
 
 Only valid for segments with an excitation tensor (`:S` port present).
@@ -640,54 +649,67 @@ Only valid for segments with an excitation tensor (`:S` port present).
 function add_contraction!(ftn::FibTN,
         edge::GridEdge, crossing_idx::Int, crossing_port::Symbol,
         pos::GridPosition;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     cg = ftn.edge_crossings[edge][crossing_idx]
     sg = ftn.segments[pos].group
     # crossing:crossing_port → R → [B →] segment:S
     # B:V1 faces the crossing (from_group side)
-    _add_reflected_contraction!(ftn, cg, crossing_port, sg, :S; with_boundary)
+    _add_reflected_contraction!(ftn, cg, crossing_port, sg, :S; with_vl)
 end
 
 """
 Contracts two fusion ports in the same plaquette `plaq`, inserting a reflector
-between them. With `with_boundary=true`, a BOUNDARY tensor is also inserted
+between them. With `with_vl=true`, a BOUNDARY tensor is also inserted
 (its `:V1` faces `fusion_idx1`).
 """
 function add_contraction!(ftn::FibTN, plaq::GridPosition,
         fusion_idx1::Int, fusion_port1::Symbol,
         fusion_idx2::Int, fusion_port2::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     fg1 = ftn.fusions[plaq][fusion_idx1]
     fg2 = ftn.fusions[plaq][fusion_idx2]
     _add_reflected_contraction!(ftn, fg1, fusion_port1, fg2, fusion_port2;
-                                with_boundary)
+                                with_vl)
 end
 
 """
 Contracts two crossing ports on the same edge `edge`, inserting a reflector
-between them. With `with_boundary=true`, a BOUNDARY tensor is also inserted
+between them. With `with_vl=true`, a BOUNDARY tensor is also inserted
 (its `:V1` faces `crossing_idx1`).
 """
 function add_contraction!(ftn::FibTN, edge::GridEdge,
         crossing_idx1::Int, crossing_port1::Symbol,
         crossing_idx2::Int, crossing_port2::Symbol;
-        with_boundary::Bool=false)
+        with_vl::Bool=false)
     cg1 = ftn.edge_crossings[edge][crossing_idx1]
     cg2 = ftn.edge_crossings[edge][crossing_idx2]
     _add_reflected_contraction!(ftn, cg1, crossing_port1, cg2, crossing_port2;
-                                with_boundary)
+                                with_vl)
+end
+
+"""
+Fixes the excitation control indices of the segment at `pos` to the given values
+`a`, `b`, `l` (0-based qubit values). The segment must have the excitation bit set
+in its mask (i.e. `hasE(get_segmenttensortype(segment))`). Adds an
+`EXCITATION_CONTROL{a,b,l}` tensor contracted against the segment's `:a`, `:b`, `:l`
+ports. The control tensor is not assigned a position and will be skipped during
+visualization.
+"""
+function fix_excitation!(ftn::FibTN, pos::GridPosition, a::Int, b::Int, l::Int)
+    segment = ftn[pos]
+    T = get_segmenttensortype(segment)
+    hasE(T) || throw(ArgumentError("segment at $pos is not an excitation"))
+    g_ctrl = _allocate_group!(ftn)
+    add_tensor!(ftn.ttn, g_ctrl, EXCITATION_CONTROL{a,b,l})
+    seg_g = segment.group
+    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :a), IL(g_ctrl, :a)))
+    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :b), IL(g_ctrl, :b)))
+    add_contraction!(ftn.ttn.tn, IC(IL(seg_g, :l), IL(g_ctrl, :l)))
+    nothing
 end
 
 ### CONTRACTION ###
 
-"""
-Fully contracts `ftn` using a three-phase ordering:
-1. Contract all reflectors into their neighbours.
-2. Contract all crossings into their neighbours (now that reflectors are gone).
-3. Contract all remaining tensors (fusions, segments, boundaries, etc.).
-
-Returns the uncontracted indices and data of the tensor.
-"""
 function naive_contract(ftn::FibTN)
     ttn = ftn.ttn
     es = ExecutionState(ttn)

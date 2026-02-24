@@ -32,9 +32,10 @@ function FibErrThresh.visualize(
     markers   = markers[order]
 
     position_from_group = Dict(g => p for (g, p) in zip(groups, positions))
-    # get endpoints of edges
+    # get endpoints of edges, skipping contractions that touch a hidden (unpositioned) group
     edge_endpoints = []
-    tnc = collect(get_contractions(tn)) # assignment so we are guaranteed the same ordering in inspector_label
+    tnc = filter(c -> haskey(position_from_group, c.a.group) && haskey(position_from_group, c.b.group),
+                 collect(get_contractions(tn)))
     for c in tnc
         pos1 = position_from_group[c.a.group]
         pos2 = position_from_group[c.b.group]
@@ -56,12 +57,14 @@ end
 
 """
 Wraps the TensorNetwork visualize function, autofilling the groups, markers, and colors.
+Groups with no entry in `position_from_group` are silently skipped (neither their node
+nor any edge touching them is drawn).
 """
 function FibErrThresh.visualize(ax::Axis, ttn::TypedTensorNetwork, position_from_group::Dict{Int,Point2f})
-    groups = get_groups(ttn.tn)
+    groups    = filter(g -> haskey(position_from_group, g), collect(get_groups(ttn.tn)))
     positions = [position_from_group[g] for g in groups]
-    colors = [tensor_color(ttn.tensortype_from_group[g]) for g in groups]
-    markers = [tensor_marker(ttn.tensortype_from_group[g]) for g in groups]
+    colors    = [tensor_color(ttn.tensortype_from_group[g]) for g in groups]
+    markers   = [tensor_marker(ttn.tensortype_from_group[g]) for g in groups]
     visualize(ax, ttn.tn, groups, positions, colors, markers)
 end
 

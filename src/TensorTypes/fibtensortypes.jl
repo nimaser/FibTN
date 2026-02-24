@@ -10,7 +10,7 @@ using TensorOperations # to do some small and compile-time-known contractions
 export FibTensorType
 export REFLECTOR, BOUNDARY, VACUUMLOOP, ELBOW_T1, ELBOW_T2, ELBOW_T3, TAIL
 export VERTEX, CROSSING, FUSION
-export STRINGEND, EXCITATION, FUSIONTREEROOT, DOUBLEDFUSION
+export STRINGEND, EXCITATION, EXCITATION_CONTROL, FUSIONTREEROOT, DOUBLEDFUSION
 
 ### UTILS ###
 
@@ -44,6 +44,7 @@ struct FUSION <: FibTensorType end
 
 struct STRINGEND <: FibTensorType end
 struct EXCITATION <: FibTensorType end
+struct EXCITATION_CONTROL{A,B,L} <: FibTensorType end
 struct FUSIONTREEROOT <: FibTensorType end
 struct DOUBLEDFUSION <: FibTensorType end
 
@@ -63,6 +64,7 @@ tensor_ports(::Type{FUSION}) = (:V1, :V2, :V3)
 
 tensor_ports(::Type{STRINGEND}) = (:α, :β, :k, :l, :V1, :V2, :S, :P)
 tensor_ports(::Type{EXCITATION}) = (:a, :b, :l, :V1, :V2, :S, :P)
+tensor_ports(::Type{<:EXCITATION_CONTROL}) = (:a, :b, :l)
 tensor_ports(::Type{FUSIONTREEROOT}) = (:ai, :bi, :li, :ao, :bo, :lo)
 tensor_ports(::Type{DOUBLEDFUSION}) = (:a, :b, :c, :d, :e, :f, :V1, :V2, :V3)
 
@@ -249,6 +251,12 @@ function _generate_tensor_data(::Type{EXCITATION})
     arr
 end
 
+function _generate_tensor_data(::Type{EXCITATION_CONTROL{A,B,L}}) where {A,B,L}
+    arr = zeros(Float64, 2, 2, 2)
+    arr[A+1, B+1, L+1] = 1.0
+    arr
+end
+
 function _generate_tensor_data(::Type{FUSIONTREEROOT})
     arr = zeros(ComplexF64, 2, 2, 2, 2, 2, 2)
     for a in 1:2, b in 1:2, l in 1:2
@@ -304,6 +312,7 @@ tensor_color(::Type{FUSION}) = :teal
 
 tensor_color(::Type{STRINGEND}) = :gray
 tensor_color(::Type{EXCITATION}) = :red
+tensor_color(::Type{<:EXCITATION_CONTROL}) = :orange
 tensor_color(::Type{DOUBLEDFUSION}) = :red
 
 tensor_marker(::Type{REFLECTOR}) = :vline
@@ -319,6 +328,7 @@ tensor_marker(::Type{FUSION}) = :star3
 
 tensor_marker(::Type{STRINGEND}) = :rect
 tensor_marker(::Type{EXCITATION}) = :rect
+tensor_marker(::Type{<:EXCITATION_CONTROL}) = :diamond
 tensor_marker(::Type{DOUBLEDFUSION}) = :star3
 
 end # module TensorTypes
