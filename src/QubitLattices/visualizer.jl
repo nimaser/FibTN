@@ -17,11 +17,71 @@ function default_qubitdisplayspec()
 end
 
 """
-Plots a qubit lattice on the provided axis. The 0 qubit is not displayed.
-All unpaired qubits are displayed as tails of length `tail_length`.
+Plots a qubit lattice on `ax`, with qubit values specified by `qubitvals_obs`.
+The 0 qubit is not displayed. Unpaired qubits are shown as tails in the direction
+of `tail_vector`.
+
+Sets up an `on(qubitvals_obs)` callback so that pushing a new `Dict{Int,Int}` to the
+observable automatically updates edge colors without replotting.
 
 Custom display properties for qubit values 0 and 1 should be provided via
 the `qubitdisplayspec` parameter.
+
+Returns `(qubits, segmentsresult)` where `qubits` is the deterministic ordering used
+internally (needed by callers that pick by index, e.g. the interactive toggle view).
+"""
+function FibErrThresh.visualize(
+    ax::Axis,
+    ql::QubitLattice,
+    position_from_index::Dict{IndexLabel, Point2f},
+    qubitvals_obs::Observable{Dict{Int, Int}};
+    qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
+    tail_vector::Point2f=Point2f(0.3, 0),
+)
+    # build deterministically ordered qubit list and static edge geometry
+    qubits = collect(get_qubits(ql))
+    filter!(!=(0), qubits)
+    edge_endpoints = Vector{Tuple{Point2f, Point2f}}()
+    for q in qubits
+        inds = get_indices(ql, q)
+        if length(inds) == 1
+            pos1 = position_from_index[inds[1]]
+            pos2 = pos1 + tail_vector
+        else
+            length(inds) == 2 || error("more than two indices sharing qubit $q")
+            pos1 = position_from_index[inds[1]]
+            pos2 = position_from_index[inds[2]]
+        end
+        push!(edge_endpoints, (pos1, pos2))
+    end
+    # build initial colors from the current observable value
+    qv = qubitvals_obs[]
+    colors = [qubitdisplayspec[:color][qv[q]] for q in qubits]
+    colors_obs = Observable(colors)
+    segmentsresult = linesegments!(ax, edge_endpoints, color=colors_obs, linewidth=5)
+    # inspector label reads live qubitvals from the observable
+    segmentsresult.inspector_label = (plot, i, idx) -> begin
+        i = i ÷ 2 # i counts by endpoints (two per segment)
+        q = qubits[i]
+        "qubit $q\n|$(qubitvals_obs[][q])⟩"
+    end
+    # whenever qubitvals_obs is updated, recolor edges without replotting
+    on(qubitvals_obs) do qv
+        for (idx, q) in enumerate(qubits)
+            colors_obs[][idx] = qubitdisplayspec[:color][get(qv, q, 0)]
+        end
+        notify(colors_obs)
+    end
+    autolimits!(ax) # set limits once based on geometry
+    qubits, segmentsresult
+end
+
+"""
+Plots `ql` on `ax` with the given `qubitvals` dict.
+
+Wraps `qubitvals` in an `Observable` and calls the observable overload.
+Returns `(qubitvals_obs, qubits, segmentsresult)` so the caller can push
+updates to the observable later.
 """
 function FibErrThresh.visualize(
     ax::Axis,
@@ -29,63 +89,45 @@ function FibErrThresh.visualize(
     position_from_index::Dict{IndexLabel, Point2f},
     qubitvals::Dict{Int, Int};
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
-    tail_length::Real=0.3,
+    tail_vector::Point2f=Point2f(0.3, 0),
 )
-    # get lists of edge endpoints and other edge display properties
-    qubits = collect(get_qubits(ql)) # so we have a deterministic ordering
-    filter!(!=(0), qubits) # we don't want to display the 0 qubit
-    edge_endpoints = Vector{Tuple{Point2f, Point2f}}()
-    colors = []
-    linewidths = []
-    for q in qubits
-        inds = get_indices(ql, q)
-        if length(inds) == 1
-            # unpaired case
-            pos1 = position_from_index[inds[1]]
-            pos2 = (pos1[1] + tail_length, pos1[2])
-        else
-            # paired case
-            length(inds) == 2 || error("more than two indices sharing qubit $q")
-            pos1 = position_from_index[inds[1]]
-            pos2 = position_from_index[inds[2]]
-        end
-        push!(edge_endpoints, (pos1, pos2))
-        push!(colors, qubitdisplayspec[:color][qubitvals[q]])
-        push!(linewidths, qubitdisplayspec[:linewidth][qubitvals[q]])
-    end
-    # plot linesegments
-    segmentsresult = linesegments!(ax, edge_endpoints, color=Observable(colors), linewidth=5)
-    segmentsresult.inspector_label = (plot, i, idx) -> begin
-        i = i ÷ 2 # i counts up by endpoints, so by two per segment plotted
-        q = qubits[i]
-        "qubit $q with value $(qubitvals[q])"
-    end
-    autolimits!(ax) # compute limits based on the axis content
-    qubits, segmentsresult
+    qubitvals_obs = Observable(qubitvals)
+    qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals_obs;
+        qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
+    qubitvals_obs, qubits, segmentsresult
 end
 
-"""Plots `ql` on `ax` with all qubits set to 0, for lattice visualization purposes."""
+"""
+Plots `ql` on `ax` with all qubits set to 0.
+
+Returns `(qubitvals_obs, qubits, segmentsresult)` so the caller can push
+updates to the observable to highlight or change qubit states.
+"""
 function FibErrThresh.visualize(
     ax::Axis,
     ql::QubitLattice,
     position_from_index::Dict{IndexLabel, Point2f};
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
-    tail_length::Real=0.3
+    tail_vector::Point2f=Point2f(0.3, 0),
 )
-    qubitvals = Dict(q => 0 for q in get_qubits(ql))
-    visualize(ax, ql, position_from_index, qubitvals;
-        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
+    qubitvals_obs = Observable(Dict(q => 0 for q in get_qubits(ql)))
+    qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals_obs;
+        qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
+    qubitvals_obs, qubits, segmentsresult
 end
 
 
 """
 Plots `states` and corresponding `amps` onto a figure with a scrollable set of 'panes',
-each of which can contain at most `maxstatesperpane` states. Left and right buttons can
-be used to change between panes.
+each of which can contain at most `maxstatesperpane` states. Left and right arrow keys
+can be used to change between panes.
+
+Each axis slot is plotted once; pane switching updates qubit colors via observables
+without replotting, so axis limits and layout remain fixed.
 
 Returns a Makie `Figure` and array of axes.
 
-Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
+Forwards `qubitdisplayspec` and `tail_vector` to `visualize`.
 """
 function FibErrThresh.visualize(
     ql::QubitLattice,
@@ -94,8 +136,9 @@ function FibErrThresh.visualize(
     amps::Vector{<:Real};
     maxstatesperpane::Int=3,
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
-    tail_length::Real=0.5,
+    tail_vector::Point2f=Point2f(0.5, 0),
 )
+    # distribute states as evenly as possible across panes
     # using exactly maxstatesperpane states per pane
     numpanes = Int(ceil(length(states) / maxstatesperpane))
     # the last pane might be mostly empty, in which case we
@@ -105,58 +148,55 @@ function FibErrThresh.visualize(
     # the same amount, then calculate the width and height
     # of each pane
     statesperpane = Int(ceil(length(states) / numpanes))
-    w, h = _calculategridsidelengths(statesperpane)
     # w*h could be larger than stateperpane, so to make
     # sure all panes are fully filled we do
-    statesperpane = w*h
+    w, h = _calculategridsidelengths(statesperpane)
     # and finally we update numpanes
+    statesperpane = w * h
     numpanes = Int(ceil(length(states) / statesperpane))
 
-    # create the figure, axes, etc
+    # create the figure and axes
     f = Figure()
-    axs = [Axis(f[r, c]; aspect = DataAspect()) for r in 1:h, c in 1:w]
-    for ax in axs ax.titlesize=32 end
+    axs = [Axis(f[r, c]; aspect=DataAspect()) for r in 1:h, c in 1:w]
+    for ax in axs ax.titlesize = 32 end
+    linkaxes!(axs...)
 
     # compute normalization factor and add to title
     square(x) = x^2
     N = sqrt(sum(square.(amps)))
     f[0, :] = Label(f, L"N = %$N", fontsize=24, tellwidth=false)
 
+    # plot the QL once per axis; store observable (for state updates) and plot (for visibility)
+    slot_obs = Vector{Observable}(undef, length(axs))
+    slot_plots = Vector{Any}(undef, length(axs))
+    for i in eachindex(axs)
+        obs, _, sr = visualize(axs[i], ql, position_from_index;
+            qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
+        slot_obs[i] = obs
+        slot_plots[i] = sr
+    end
+
     get_pane_states(pane::Int) = states[(pane-1)*statesperpane+1:min(pane*statesperpane, length(states))]
     get_pane_amps(pane::Int) = amps[(pane-1)*statesperpane+1:min(pane*statesperpane, length(amps))]
 
-    # set up slilders
+    # set up slider
     sg = SliderGrid(f[h+1, :],
-                    (
-                        label="Pane #",
-                        range = 1:numpanes,
-                        startvalue = 1,
-                        update_while_dragging=false
-                    )
-    )
+        (label="Pane #", range=1:numpanes, startvalue=1, update_while_dragging=false))
     sl = sg.sliders[1]
     on(sl.value) do v
-        # get the states and amps
-        pane_states = get_pane_states(v[])
-        pane_amps = get_pane_amps(v[])
-        # prepare the axes and display the amps
-        for ax in axs
-            empty!(ax)
-            ax.title=""
-        end
-        for i in 1:length(pane_amps)
-            axs[i].title="$(pane_amps[i])"
-        end
-        # plot the states; hide unused axes so DataInspector doesn't crash on them
-        for i in 1:length(pane_states)
-            visualize(axs[i], ql, position_from_index, pane_states[i]; qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
-            axs[i].scene.visible[] = true
-        end
-        for i in length(pane_states)+1:length(axs)
-            axs[i].scene.visible[] = false
+        pane_states = get_pane_states(v)
+        pane_amps = get_pane_amps(v)
+        for i in eachindex(axs)
+            if i <= length(pane_states)
+                axs[i].title = "$(pane_amps[i])"
+                slot_obs[i][] = pane_states[i]
+                slot_plots[i].visible = true
+            else
+                axs[i].title = ""
+                slot_plots[i].visible = false
+            end
         end
     end
-    # finalize slider interaction
     notify(sl.value)
     register_interaction!(axs[1], :change_pane) do event::KeysEvent, ax
         if Keyboard.left ∈ event.keys
@@ -165,12 +205,12 @@ function FibErrThresh.visualize(
             set_close_to!(sl, sl.value[] + 1)
         end
     end
-    # cleanup and return
-    DataInspector(f, range=30)
+
     for ax in axs
         hidespines!(ax)
         hidedecorations!(ax)
     end
+    add_inspector_lazily!(f)
     resize_to_layout!(f)
     f, axs
 end
@@ -182,7 +222,7 @@ containing `ax`; it is needed for pixel-accurate picking.
 
 Caller is responsible for cleanup (hiding decorations, `DataInspector`, etc.).
 
-Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
+Forwards `qubitdisplayspec` and `tail_vector` to `visualize`.
 """
 function FibErrThresh.visualize(
     f::Figure,
@@ -192,49 +232,41 @@ function FibErrThresh.visualize(
     inds::Vector{IndexLabel},
     data::AbstractArray;
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
-    tail_length::Real=0.5,
+    tail_vector::Point2f=Point2f(0.5, 0),
 )
-    # helper function that calculates amplitude from qubitvals
+    # helper: amplitude for a given qubitvals dict
     function get_amp(qubitvals::Dict{Int, Int})
         _, vals = qubitvals2idxvals(ql, qubitvals; inds=inds)
         try
             data[vals...]
         catch e
-            # if we left the vertex-constraint subspace
-            e isa BoundsError ? 0.0 : rethrow(e)
+            e isa BoundsError ? 0.0 : rethrow(e) # out of vertex-constraint subspace
         end
     end
-    # plot all 0 state and put amplitude
-    qubitvals = Dict(q => 0 for q in get_qubits(ql))
-    qubits, segmentsresult = visualize(ax, ql, position_from_index, qubitvals;
-        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
-    ax.title="$(get_amp(qubitvals))"
-    # click callback function
+    # plot all-zero state; get observable and qubit ordering
+    qubitvals_obs, qubits, segmentsresult = visualize(ax, ql, position_from_index;
+        qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
+    ax.title = "$(get_amp(qubitvals_obs[]))"
+    # left-click toggles qubits; deregister default rectanglezoom first
     deregister_interaction!(ax, :rectanglezoom)
     toggled = Set{Int}()
     register_interaction!(ax, :toggle_qubit) do event::MouseEvent, ax
-        # discard non-leftdrag
         if event.type == MouseEventTypes.leftup
             empty!(toggled)
             return
         end
         if event.type != MouseEventTypes.leftdrag &&
            event.type != MouseEventTypes.leftdown return end
-        # get the segment that was clicked, and check that it was our segments plot
         p, i = pick(f, 20)
-        if p != segmentsresult return end
-        # get selected qubit
+        p == segmentsresult || return
         idx = i ÷ 2
         q = qubits[idx]
-        if q ∈ toggled return end
-        # toggle selected qubit
-        qubitvals[q] = 1 - qubitvals[q]
+        q ∈ toggled && return
+        # toggle qubit in-place in the observable's dict, then notify
+        qubitvals_obs[][q] = 1 - qubitvals_obs[][q]
         push!(toggled, q)
-        # update the ax title and segment display properties
-        ax.title="$(get_amp(qubitvals))"
-        colors_observable = segmentsresult.kw[:color]
-        colors_observable[][idx] = qubitdisplayspec[:color][qubitvals[q]]
-        notify(colors_observable)
+        ax.title = "$(get_amp(qubitvals_obs[]))"
+        notify(qubitvals_obs)
     end
     nothing
 end
@@ -244,7 +276,7 @@ Interactive view of the qubit lattice: left-clicking an edge toggles its value,
 allowing exploration of the amplitudes of different states. Creates and returns a
 new `Figure` and `Axis`.
 
-Forwards `qubitdisplayspec` and `tail_length` to `visualize`.
+Forwards `qubitdisplayspec` and `tail_vector` to `visualize`.
 """
 function FibErrThresh.visualize(
     ql::QubitLattice,
@@ -252,12 +284,12 @@ function FibErrThresh.visualize(
     inds::Vector{IndexLabel},
     data::AbstractArray;
     qubitdisplayspec::Dict{Symbol, Dict{Int, Any}}=default_qubitdisplayspec(),
-    tail_length::Real=0.5,
+    tail_vector::Point2f=Point2f(0.5, 0),
 )
     f = Figure()
     ax = Axis(f[1, 1]; aspect=DataAspect())
     visualize(f, ax, ql, position_from_index, inds, data;
-        qubitdisplayspec=qubitdisplayspec, tail_length=tail_length)
+        qubitdisplayspec=qubitdisplayspec, tail_vector=tail_vector)
     DataInspector(f, range=20)
     hidespines!(ax)
     hidedecorations!(ax)

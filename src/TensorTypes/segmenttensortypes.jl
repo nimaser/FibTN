@@ -284,8 +284,8 @@ function _segment_ttn(::Type{SegmentTensorType{Mask}}) where {Mask}
     if hasB(Mask)
         add_tensor!(ttn, 10, BOUNDARY)
         add_tensor!(ttn, 11, REFLECTOR)
-        add_contraction!(ttn.tn, IC(IL(9, :V2), IL(10, :V1)))
-        add_contraction!(ttn.tn, IC(IL(10, :V2), IL(11, :V1)))
+        add_contraction!(ttn.tn, IC(IL(9, :V2), IL(10, :V2)))
+        add_contraction!(ttn.tn, IC(IL(10, :V1), IL(11, :V1)))
     end
     # add middle tensors
     if hasM(Mask)
